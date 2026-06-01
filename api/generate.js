@@ -35,7 +35,17 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+            // "512" | "1K" | "2K" | "4K" — default ohne Angabe ist 4K → sehr langsam.
+            // 1K (1024×1024) reicht für ein rundes Label auf einem 3D-Tin völlig.
+            responseFormat: {
+              image: {
+                aspectRatio: '1:1',
+                imageSize: '1K',
+              },
+            },
+          },
         }),
       }
     );
