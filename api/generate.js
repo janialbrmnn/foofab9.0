@@ -1,12 +1,12 @@
-// Vercel serverless function — server-side proxy to Google Nano Banana 2
-// (Gemini 3.1 Flash Image). Nano Banana 2 returns inline base64 data, so
-// there is no external image URL and no CORS proxy needed — the data URL
-// goes straight to the browser and into the Three.js TextureLoader.
+// Vercel serverless function — server-side proxy to Ablo AI image generation.
+// Ablo returns an external CDN image URL; we fetch it server-side and return
+// a base64 data URL so the browser never hits a CORS issue.
 //
-// API key: set GOOGLE_API_KEY in your Vercel environment variables
+// API key: set ABLO_API_KEY in your Vercel environment variables
 // (Dashboard → Project → Settings → Environment Variables).
 // Never commit the real key to git — add .env to .gitignore locally.
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
+const ABLO_API_KEY  = process.env.ABLO_API_KEY || '';
+const ABLO_ENDPOINT = 'https://virtual-tryserver-production.up.railway.app/api/v1/images';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,39 +14,26 @@ export default async function handler(req, res) {
     return;
   }
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    const body   = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const prompt = (body.prompt || '').trim();
     if (!prompt) {
       res.status(400).json({ error: 'missing prompt' });
       return;
     }
-    if (!GOOGLE_API_KEY) {
-      res.status(500).json({ error: 'GOOGLE_API_KEY not configured' });
+    if (!ABLO_API_KEY) {
+      res.status(500).json({ error: 'ABLO_API_KEY not configured' });
       return;
     }
 
-    const upstream = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': GOOGLE_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
-            // imageConfig steuert Ausgabegröße — "512" | "1K" | "2K" | "4K"
-            // Default ohne Angabe ist 4K → sehr langsam.
-            // 1K (1024px) reicht für ein rundes Label auf dem 3D-Tin völlig.
-            imageConfig: {
-              imageSize: '1K',
-            },
-          },
-        }),
-      }
-    );
+    // 1 — Ablo image generation request
+    const upstream = await fetch(ABLO_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': ABLO_API_KEY,
+      },
+      body: JSON.stringify({ prompt }),
+    });
 
     if (!upstream.ok) {
       const err = await upstream.text();
@@ -55,15 +42,29 @@ export default async function handler(req, res) {
     }
 
     const data = await upstream.json();
-    const imgPart = data?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
-    if (!imgPart) {
-      res.status(500).json({ error: 'no image in response' });
+
+    // Ablo may nest the URL under different keys depending on version
+    const imageUrl = data?.url || data?.imageUrl || data?.image_url
+      || data?.images?.[0]?.url || data?.images?.[0];
+
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      res.status(500).json({ error: 'no image URL in Ablo response: ' + JSON.stringify(data) });
       return;
     }
 
-    // Return a data URL — the frontend can load this directly into
-    // THREE.TextureLoader without any further proxying.
-    const dataUrl = `data:${imgPart.mimeType};base64,${imgPart.data}`;
+    // 2 — Fetch the actual image server-side (avoids CORS on the CDN URL)
+    //     and convert to base64 data URL so Three.js can load it directly.
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) {
+      // Fall back to returning the raw URL — frontend can try loading it directly
+      res.status(200).json({ imageUrl });
+      return;
+    }
+    const mimeType  = imgRes.headers.get('content-type') || 'image/jpeg';
+    const buffer    = await imgRes.arrayBuffer();
+    const base64    = Buffer.from(buffer).toString('base64');
+    const dataUrl   = `data:${mimeType};base64,${base64}`;
+
     res.status(200).json({ imageUrl: dataUrl });
   } catch (e) {
     res.status(500).json({ error: String(e && e.message || e) });
