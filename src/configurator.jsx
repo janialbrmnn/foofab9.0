@@ -1333,6 +1333,33 @@ const Configurator = () => {
                   }}
                 />
               </div>
+
+              {cfg.base === 'pulmoll' && (
+                <div style={{ marginTop: 20 }}>
+                  <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                    eigener produktname · optional
+                  </label>
+                  <div style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', marginTop: 4, marginBottom: 8, opacity: 0.6 }}>
+                    leer lassen → volles pulmoll design · text eingeben → ersetzt „die pastille"
+                  </div>
+                  <input
+                    value={cfg.pulmollName || ''}
+                    onChange={e => setCfg({ ...cfg, pulmollName: e.target.value })}
+                    placeholder="z.b. deine edition"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '12px 14px',
+                      background: 'var(--bg-2)',
+                      border: '1px solid var(--line)',
+                      color: 'var(--fg)',
+                      fontFamily: 'inherit',
+                      fontSize: 'calc(16px * var(--scale))',
+                      textTransform: 'uppercase',
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 

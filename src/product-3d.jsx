@@ -708,32 +708,37 @@ const drawPulmollTopCanvas = (cfg, { transparent = false } = {}) => {
   }
 
   // Welches SVG-Overlay?
-  // — Custom Name eingegeben → minimales Overlay (nur Schriftzug + Band)
-  //   + Produktname klein oben
-  // — Kein Custom Name → volles Overlay (DIE PASTILLE + Schriftzug + Band + Icon + CLASSIC)
-  const hasCustomName = !!(cfg && cfg.name && cfg.name.trim().length > 0);
+  // cfg.pulmollName: eigener Produktname (nur für Pulmoll, unabhängig von cfg.name)
+  // — pulmollName leer/undefined → volles Overlay (DIE PASTILLE + Schriftzug + Band + Icon + CLASSIC)
+  // — pulmollName gesetzt      → minimales Overlay (Schriftzug + Band) + Name oben statt DIE PASTILLE
+  const pulmollName = (cfg && cfg.pulmollName && cfg.pulmollName.trim()) || '';
+  const hasCustomName = pulmollName.length > 0;
   const svg = hasCustomName ? cfg._pulmollMinimal : cfg._pulmollOverlay;
 
   if (svg) {
     // Beide SVGs: volle Breite → Band geht bis an den Rand
-    const isMinimal = hasCustomName;
     // Minimal: viewBox 978.4 × 321.3 | Voll: viewBox 1987.4 × 667.1
-    const svgW = isMinimal ? 978.4 : 1987.4;
-    const svgH = isMinimal ? 321.3 : 667.1;
+    const svgW = hasCustomName ? 978.4 : 1987.4;
+    const svgH = hasCustomName ? 321.3 : 667.1;
     const drawW = S;
-    const drawH = S * (svgH / svgW);
+    const drawH = S * (svgH / svgW);           // ~168px für beide
     const drawX = 0;
-    const drawY = (S - drawH) / 2;
+    const drawY = (S - drawH) / 2;             // ~172px — SVG mittig vertikal
+
     ctx.drawImage(svg, drawX, drawY, drawW, drawH);
 
-    // Beim minimalen SVG: Produktname klein oben drüber
-    if (isMinimal && cfg.name) {
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.font = `500 ${Math.round(S * 0.058)}px Arial, Helvetica, sans-serif`;
+    // Beim minimalen SVG: Produktname dort einzeichnen, wo "DIE PASTILLE" wäre —
+    // also knapp oberhalb des Schriftzug-Bereichs (oberes Drittel der Kreisfläche).
+    if (hasCustomName) {
+      // Zielbereich: zwischen Kreisrand oben und SVG-Oberkante → Mitte davon
+      const textY = drawY * 0.62;             // ~107px ≈ oberes Drittel
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.font = `700 ${Math.round(S * 0.052)}px Arial, Helvetica, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Buchstaben-Spacing simulieren
-      ctx.fillText(cfg.name.toUpperCase().split('').join(' '), S / 2, S * 0.17);
+      ctx.letterSpacing = `${Math.round(S * 0.008)}px`;
+      ctx.fillText(pulmollName.toUpperCase(), S / 2, textY);
+      ctx.letterSpacing = '0px';
     }
   }
 
@@ -1011,7 +1016,7 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
     ]).then(([bg, logo, pulmollOverlay, pulmollMinimal]) => build(bg, logo, pulmollOverlay, pulmollMinimal));
 
     return () => { cancelled = true; };
-  }, [cfg.pack, cfg.color, cfg.name, cfg.handle, cfg.flavor, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity]);
+  }, [cfg.pack, cfg.color, cfg.name, cfg.pulmollName, cfg.handle, cfg.flavor, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity]);
 
   // Pointer drag → rotate
   const onPointerDown = (e) => {
