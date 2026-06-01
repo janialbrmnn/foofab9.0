@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     }
 
     const upstream = await fetch(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-image:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent',
       {
         method: 'POST',
         headers: {
