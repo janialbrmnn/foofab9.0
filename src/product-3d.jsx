@@ -789,8 +789,11 @@ const buildPulmoll = (cfg) => {
     labelGroup.add(bgMesh);
   }
 
-  // Layer 2: Pulmoll-Branding-Overlay (immer transparent=true damit
-  // transparente Canvas-Bereiche das darunterliegende durchscheinen lassen)
+  // Layer 2: Pulmoll-Branding-Overlay
+  // — kein AI-Bg: normales opakes Mesh (depthWrite: true), sonst überschreibt
+  //   die Dose den Kreis weil kein Depth-Wert geschrieben wird.
+  // — mit AI-Bg: transparent + depthWrite: false + renderOrder: 1 damit das
+  //   Overlay sauber über dem Artwork liegt ohne Z-Fighting.
   const brandTex = drawPulmollTopCanvas(cfg, { transparent: hasBg });
   const brandMesh = new THREE.Mesh(
     new THREE.CircleGeometry(lipR, 96),
@@ -798,11 +801,12 @@ const buildPulmoll = (cfg) => {
       map: brandTex,
       roughness: 0.28, metalness: 0.08,
       transparent: hasBg,
-      depthWrite: false,   // verhindert Z-Fighting mit dem BG-Bild
+      depthWrite: !hasBg,
     })
   );
-  // Z-Offset: hebt das Overlay klar über das Artwork (lokales Z = Welt-Y)
-  brandMesh.position.z = hasBg ? 0.04 : 0;
+  brandMesh.renderOrder = hasBg ? 1 : 0;
+  // Kleiner Z-Offset damit kein Z-Fighting mit der Deckellippe (lokales Z = Welt-Y)
+  brandMesh.position.z = hasBg ? 0.04 : 0.002;
   labelGroup.add(brandMesh);
   group.add(labelGroup);
 
@@ -976,7 +980,8 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
 
     // SVGs exported from Illustrator have no width/height — only viewBox.
     // Browsers report naturalWidth=0 for such SVGs, so ctx.drawImage() draws
-    // nothing. Fix: fetch as text, inject explicit dimensions, load via blob URL.
+    // nothing. Fix: fetch as text, inject explicit dimensions, use a data URL
+    // (avoids CSP issues that blob: URLs sometimes trigger).
     const loadSvg = (src, svgW, svgH) => new Promise((resolve) => {
       if (!src) return resolve(null);
       fetch(src)
@@ -987,12 +992,11 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
             if (!/\bheight=/.test(attrs)) attrs += ` height="${svgH}"`;
             return attrs + end;
           });
-          const blob = new Blob([patched], { type: 'image/svg+xml;charset=utf-8' });
-          const url  = URL.createObjectURL(blob);
-          const img  = new Image();
-          img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
-          img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-          img.src = url;
+          const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(patched);
+          const img = new Image();
+          img.onload  = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = dataUrl;
         })
         .catch(() => resolve(null));
     });
