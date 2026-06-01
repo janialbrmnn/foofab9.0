@@ -727,8 +727,10 @@ const drawPulmollTopCanvas = (cfg) => {
     ctx.drawImage(svg, 0, drawY, drawW, drawH);
 
     // Produktname oben statt „DIE PASTILLE"
+    // Position: just above the wordmark (which sits at the top of the minimal SVG),
+    // in the same visual zone as "DIE PASTILLE" in the full overlay.
     if (hasCustomName) {
-      const textY = drawY * 0.62;
+      const textY = drawY - S * 0.025; // 12px above the SVG top edge
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
       ctx.font = `700 ${Math.round(S * 0.052)}px Arial, Helvetica, sans-serif`;
       ctx.textAlign = 'center';
