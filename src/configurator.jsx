@@ -1172,19 +1172,20 @@ const Configurator = () => {
         body: JSON.stringify({ prompt }),
       });
       if (!res.ok) {
-        if (res.status === 404) throw new Error('proxy nicht gefunden — nur auf vercel/live verfügbar, nicht in der vorschau');
-        throw new Error('server-fehler ' + res.status);
+        let errDetail = '';
+        try { const j = await res.json(); errDetail = j?.error || ''; } catch {}
+        if (res.status === 404) throw new Error('404 — /api/generate nicht gefunden. Läuft das auf Vercel? Lokal brauchst du "vercel dev".');
+        if (res.status === 500 && errDetail.includes('GOOGLE_API_KEY')) throw new Error('GOOGLE_API_KEY fehlt — in Vercel unter Settings → Environment Variables setzen.');
+        throw new Error(`fehler ${res.status}${errDetail ? ': ' + errDetail : ''}`);
       }
       const data = await res.json();
       // Nano Banana 2 returns inline base64 → bereits eine data URL, kein Proxy nötig.
       const imageUrl = data?.imageUrl;
-      if (!imageUrl) throw new Error('kein bild erhalten');
+      if (!imageUrl) throw new Error('kein bild erhalten — response: ' + JSON.stringify(data));
       setCfg(prev => ({ ...prev, labelBgUrl: imageUrl }));
     } catch (e) {
-      // Preview has no backend → demo the mapping with a bundled placeholder
-      // so the label texture pipeline is testable without the live proxy.
       setCfg(prev => ({ ...prev, labelBgUrl: 'assets/label-placeholder.webp' }));
-      setGenError('vorschau: proxy nicht erreichbar — zeige platzhalter-artwork (live auf vercel klappt der echte call)');
+      setGenError(e?.message || 'unbekannter fehler');
     } finally {
       setGenLoading(false);
     }
