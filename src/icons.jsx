@@ -1,11 +1,11 @@
-// Icons — real power PNG + serif/mono wordmark
+// Icons — Foodciety wordmark + futuristic power orb
 
 const PowerIcon = ({ size = 64, color = 'currentColor' }) => (
   <img src="assets/power.png" alt="" width={size} height={size}
-    style={{ display: 'block', filter: color === 'currentColor' ? undefined : 'none' }} />
+    style={{ display: 'block' }} />
 );
 
-// Big pulsing orb using the real power icon
+// Futuristic pulsing orb — dark core, rotating conic ring, soft glow
 const PowerOrb = ({ size = 220, pulsing = true, onClick, label }) => (
   <button
     onClick={onClick}
@@ -21,43 +21,63 @@ const PowerOrb = ({ size = 220, pulsing = true, onClick, label }) => (
       cursor: 'pointer',
     }}
   >
+    {/* expanding pulse rings */}
     {pulsing && (
       <>
         <span style={{
           position: 'absolute', inset: 0,
           borderRadius: '50%',
-          border: '1.5px solid rgba(22,20,15,0.35)',
+          border: '1px solid color-mix(in srgb, var(--accent) 55%, transparent)',
           animation: 'pulse-ring 2.6s cubic-bezier(.2,.8,.2,1) infinite',
         }} />
         <span style={{
           position: 'absolute', inset: 0,
           borderRadius: '50%',
-          border: '1px solid rgba(22,20,15,0.22)',
+          border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
           animation: 'pulse-ring 2.6s cubic-bezier(.2,.8,.2,1) 0.9s infinite',
         }} />
       </>
     )}
+
+    {/* rotating conic ring */}
+    <span style={{
+      position: 'absolute', inset: -6,
+      borderRadius: '50%',
+      background: 'conic-gradient(from 0deg, transparent 0%, var(--accent) 18%, transparent 40%, transparent 60%, color-mix(in srgb, var(--accent) 45%, transparent) 78%, transparent 100%)',
+      WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
+      mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
+      animation: 'orb-rotate 4s linear infinite',
+    }} />
+    {/* second ring, counter-rotating */}
+    <span style={{
+      position: 'absolute', inset: 6,
+      borderRadius: '50%',
+      background: 'conic-gradient(from 180deg, transparent 0%, color-mix(in srgb, var(--accent) 40%, transparent) 12%, transparent 30%)',
+      WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px))',
+      mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px))',
+      animation: 'orb-rotate-rev 7s linear infinite',
+    }} />
+
+    {/* core — warm accent orb instead of black */}
     <span style={{
       position: 'relative',
-      width: '100%', height: '100%',
+      width: '78%', height: '78%',
       borderRadius: '50%',
-      background: 'radial-gradient(circle at 32% 28%, #ffffff 0%, #f2efe8 55%, #d8d4c8 100%)',
+      background: 'radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--accent) 42%, #fff) 0%, var(--accent) 58%, color-mix(in srgb, var(--accent) 62%, #16140f) 100%)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 24px 50px rgba(22,20,15,0.28), inset 0 -10px 28px rgba(22,20,15,0.08), inset 0 2px 6px rgba(255,255,255,0.8)',
-      animation: pulsing ? 'pulse-glow 2.6s ease-in-out infinite' : 'none',
-      transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
+      boxShadow: '0 22px 55px color-mix(in srgb, var(--accent) 42%, transparent), 0 0 40px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 1px 2px rgba(255,255,255,0.45)',
     }}>
-      <img src="assets/power.png" alt="" width={size * 0.42} height={size * 0.42 * (639/571)} style={{ display: 'block' }} />
+      <img src="assets/power.png" alt="" width={size * 0.3} height={size * 0.3 * (639/571)}
+        style={{ display: 'block', filter: 'invert(1) drop-shadow(0 0 10px rgba(255,255,255,0.6))' }} />
     </span>
   </button>
 );
 
-// Wordmark using logo PNG
+// Wordmark — Foodciety logo PNG
 const Wordmark = ({ height = 22 }) => (
-  <img src="assets/foofab-logo.png" alt="foofab" style={{ height, width: 'auto', display: 'block' }} />
+  <img src="assets/foodciety-logo.png" alt="foodciety" style={{ height, width: 'auto', display: 'block' }} />
 );
 
-// Small inline mono-mark (fallback for places where logo png is too big)
 const PowerMark = ({ size = 18 }) => (
   <img src="assets/power.png" alt="" width={size} height={size * (639/571)} style={{ display: 'block' }} />
 );
@@ -71,6 +91,28 @@ const Arrow = ({ dir = 'right', size = 14 }) => {
   );
 };
 
+// Small back control in eyebrow style — replaces the "[ 002 / create ]"
+// kicker above page headlines.
+const BackKicker = ({ lang = 'en', onClick, style = {} }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: 0, minHeight: 0,
+      color: 'var(--fg-3)',
+      fontSize: 'calc(11px * var(--scale))',
+      letterSpacing: '0.2em',
+      cursor: 'pointer',
+      transition: 'color 140ms',
+      ...style,
+    }}
+    onMouseEnter={e => { e.currentTarget.style.color = 'var(--fg)'; }}
+    onMouseLeave={e => { e.currentTarget.style.color = 'var(--fg-3)'; }}
+  >
+    [ ← {lang === 'de' ? 'zurück' : 'back'} ]
+  </button>
+);
+
 const Cross = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 16 16">
     <path d="M 3 3 L 13 13 M 13 3 L 3 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square" />
@@ -83,4 +125,4 @@ const Plus = ({ size = 14 }) => (
   </svg>
 );
 
-Object.assign(window, { PowerIcon, PowerOrb, Wordmark, PowerMark, Arrow, Cross, Plus });
+Object.assign(window, { PowerIcon, PowerOrb, Wordmark, PowerMark, Arrow, Cross, Plus, BackKicker });

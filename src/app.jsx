@@ -4,6 +4,8 @@ const { useState, useEffect } = React;
 
 const App = () => {
   const [page, setPage] = useState(() => localStorage.getItem('foofab.page') || 'landing');
+  const [lang, setLangRaw] = useState(() => localStorage.getItem('foodciety.lang') || 'en');
+  const setLang = (l) => { setLangRaw(l); try { localStorage.setItem('foodciety.lang', l); } catch (e) {} };
   const [settings, setSettingsRaw] = useState(window.TWEAK_DEFAULTS || { theme: 'light', accent: 'terracotta', typeScale: 'medium' });
   const [images, setImagesRaw] = useState(() => {
     try {return JSON.parse(localStorage.getItem('foofab.images') || '{}');}
@@ -67,20 +69,35 @@ const App = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const go = (p) => { setPage(p); setMenuOpen(false); };
 
+  const navT = lang === 'de'
+    ? { about: 'über uns', create: 'create', imprint: 'impressum' }
+    : { about: 'about', create: 'create', imprint: 'imprint' };
+
   const nav =
   <nav className="nav" data-screen-label={page}>
       <button className="nav-brand" onClick={() => go('landing')} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Wordmark height={22} />
+        <Wordmark height={16} />
       </button>
       <button className={'nav-burger ' + (menuOpen ? 'open' : '')}
         onClick={() => setMenuOpen(v => !v)} aria-label="menu">
         <span /><span /><span />
       </button>
       <div className={'nav-links ' + (menuOpen ? 'open' : '')}>
-        <button onClick={() => go('hub')}>about</button>
-        <button className={page === 'config' || page === 'inspire' || page === 'collab' ? 'active' : ''}
-      onClick={() => go('hub')}>create</button>
-        <button onClick={() => go('landing')}>impressum</button>
+        <button onClick={() => go('hub')}>{navT.about}</button>
+        <button className={page === 'config' || page === 'inspire' || page === 'collab' || page === 'sell' ? 'active' : ''}
+      onClick={() => go('hub')}>{navT.create}</button>
+        <button onClick={() => go('landing')}>{navT.imprint}</button>
+        <div style={{ display: 'flex', gap: 2, border: '1px solid var(--line)', fontSize: 10, letterSpacing: '0.1em', alignSelf: 'center' }}>
+          {['en', 'de'].map(l => (
+            <button key={l} onClick={() => setLang(l)}
+              style={{
+                padding: '5px 9px', minHeight: 28, width: 'auto', borderBottom: 'none',
+                background: lang === l ? 'var(--fg)' : 'transparent',
+                color: lang === l ? 'var(--bg)' : 'var(--fg-3)',
+                cursor: 'pointer', textTransform: 'uppercase', textAlign: 'center',
+              }}>{l}</button>
+          ))}
+        </div>
       </div>
     </nav>;
 
@@ -88,11 +105,12 @@ const App = () => {
   return (
     <>
       {page !== 'landing' && nav}
-      {page === 'landing' && <Landing onEnter={() => setPage('hub')} />}
-      {page === 'hub' && <Hub onGo={setPage} />}
-      {page === 'config' && <Configurator />}
-      {page === 'inspire' && <Inspire onConfig={() => setPage('config')} />}
-      {page === 'collab' && <Collab />}
+      {page === 'landing' && <Landing onEnter={() => setPage('hub')} lang={lang} onLang={setLang} />}
+      {page === 'hub' && <Hub onGo={setPage} lang={lang} onBack={() => setPage('landing')} />}
+      {page === 'config' && <Configurator lang={lang} onBack={() => setPage('hub')} />}
+      {page === 'sell' && <ComingSoon lang={lang} onBack={() => setPage('hub')} />}
+      {page === 'inspire' && <Inspire onConfig={() => setPage('config')} lang={lang} onBack={() => setPage('hub')} />}
+      {page === 'collab' && <Collab lang={lang} onConfig={() => setPage('config')} onBack={() => setPage('hub')} />}
 
       <Tweaks open={tweaksOpen} onClose={() => setTweaksOpen(false)}
       settings={settings} setSettings={setSettings}

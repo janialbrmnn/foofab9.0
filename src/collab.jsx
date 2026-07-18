@@ -1,247 +1,150 @@
-// Collab — partner matrix, creator/brand matching
+// Collab — card-grid layout (swapped from old inspire) with What The Gummies featured
 
-const BRANDS = [
-  { name: 'pulmoll',    kind: 'brand',   cat: 'hard candy',   since: '1949', fit: 92, open: true,  note: 'modernisierung durch creator-led storytelling' },
-  { name: 'ronnefeldt', kind: 'brand',   cat: 'tea',          since: '1823', fit: 87, open: true,  note: 'tea-inspired gummies / functional infusions' },
-  { name: 'kalfany',    kind: 'brand',   cat: 'hard candy',   since: '1923', fit: 84, open: false, note: 'premium-formate · custom dosen' },
-  { name: 'schwarzwald-milch', kind: 'brand', cat: 'dairy',  since: '1931', fit: 78, open: true, note: 'cheese-pairing drops möglich' },
-];
+const COLLAB_T = {
+  en: {
+    kicker: '[ collab / partner grid ]',
+    h2a: 'team up.',
+    h2b: 'blow up',
+    featuredTag: 'featured partner',
+    wtgName: 'what the gummies',
+    wtgDesc: 'the first gummy brand built purely on collabs. every drop is a collaboration. creators, brands, communities. your concept could be next.',
+    wtgCta: 'pitch a collab →',
+    filter: ['all', 'brands', 'creators'],
+    open: '● open',
+    wait: '○ waitlist',
+    request: 'send request →',
+    cards: [
+      { name: 'what the gummies', kind: 'brands', cat: 'gummies · collab-native', note: 'first pure-collab gummy brand', open: true, slot: 'collab.brand.wtg' },
+      { name: 'rené schmock', kind: 'creators', cat: 'culinary · 2.4M reach', note: 'launch case · 18k units / 24h', open: true, slot: 'collab.creator.reneschmock' },
+      { name: 'ronnefeldt', kind: 'brands', cat: 'tea · est. 1823', note: 'tea-inspired gummies / infusions', open: true, slot: 'collab.brand.ronnefeldt' },
+      { name: 'andreas herb', kind: 'creators', cat: 'lifestyle · 1.8M reach', note: 'gummy co-drop nov 2025', open: true, slot: 'collab.creator.andreasherb' },
+      { name: 'kalfany', kind: 'brands', cat: 'hard candy · est. 1923', note: 'premium formats · custom tins', open: false, slot: 'collab.brand.kalfany' },
+      { name: '@mamakollektiv', kind: 'creators', cat: 'parenting · 412k reach', note: 'highly loyal community', open: true, slot: 'collab.creator.mamakollektiv' },
+      { name: 'schwarzwald-milch', kind: 'brands', cat: 'dairy · est. 1931', note: 'cheese-pairing drops possible', open: true, slot: 'collab.brand.schwarzwaldmilch' },
+      { name: '@hannah.lifts', kind: 'creators', cat: 'fitness · 980k reach', note: 'recovery gummy wip', open: false, slot: 'collab.creator.hannahlifts' },
+    ],
+  },
+  de: {
+    kicker: '[ collab / partner-grid ]',
+    h2a: 'zusammen',
+    h2b: 'abheben',
+    featuredTag: 'featured partner',
+    wtgName: 'what the gummies',
+    wtgDesc: 'die erste fruchtgummi-marke, die rein auf collabs basiert. jeder drop ist eine kollaboration. creator, marken, communities. dein konzept könnte das nächste sein.',
+    wtgCta: 'collab pitchen →',
+    filter: ['alle', 'marken', 'creator'],
+    open: '● offen',
+    wait: '○ warteliste',
+    request: 'anfrage senden →',
+    cards: [
+      { name: 'what the gummies', kind: 'brands', cat: 'gummies · collab-native', note: 'erste pure-collab gummy-marke', open: true, slot: 'collab.brand.wtg' },
+      { name: 'rené schmock', kind: 'creators', cat: 'culinary · 2,4M reichweite', note: 'launch case · 18k units / 24h', open: true, slot: 'collab.creator.reneschmock' },
+      { name: 'ronnefeldt', kind: 'brands', cat: 'tee · seit 1823', note: 'tea-inspired gummies / infusions', open: true, slot: 'collab.brand.ronnefeldt' },
+      { name: 'andreas herb', kind: 'creators', cat: 'lifestyle · 1,8M reichweite', note: 'gummy co-drop nov 2025', open: true, slot: 'collab.creator.andreasherb' },
+      { name: 'kalfany', kind: 'brands', cat: 'hard candy · seit 1923', note: 'premium-formate · custom dosen', open: false, slot: 'collab.brand.kalfany' },
+      { name: '@mamakollektiv', kind: 'creators', cat: 'parenting · 412k reichweite', note: 'hoch loyale community', open: true, slot: 'collab.creator.mamakollektiv' },
+      { name: 'schwarzwald-milch', kind: 'brands', cat: 'molkerei · seit 1931', note: 'cheese-pairing drops möglich', open: true, slot: 'collab.brand.schwarzwaldmilch' },
+      { name: '@hannah.lifts', kind: 'creators', cat: 'fitness · 980k reichweite', note: 'recovery gummy wip', open: false, slot: 'collab.creator.hannahlifts' },
+    ],
+  },
+};
 
-const CREATORS = [
-  { name: 'rené schmock',   kind: 'creator', cat: 'culinary', reach: '2.4M', fit: 95, open: true,  note: 'launch-case · 18k units / 24h' },
-  { name: 'andreas herb',   kind: 'creator', cat: 'lifestyle',reach: '1.8M', fit: 89, open: true,  note: 'gummy co-drop november 2025' },
-  { name: '@mamakollektiv', kind: 'creator', cat: 'mom',      reach: '412k', fit: 76, open: true,  note: 'parenting-community · hoch loyal' },
-  { name: '@hannah.lifts',  kind: 'creator', cat: 'fitness',  reach: '980k', fit: 82, open: false, note: 'recovery-gummy wip' },
-];
-
-// Desktop row: horizontal, information-dense
-const DesktopRow = ({ item, onPick, picked }) => (
-  <button
-    onClick={onPick}
-    className="collab-row-desktop"
-    style={{
-      display: 'grid',
-      gridTemplateColumns: 'auto 1fr auto auto auto',
-      alignItems: 'center',
-      gap: 20,
-      padding: '16px 16px',
-      border: `1px solid ${picked ? 'var(--fg)' : 'var(--line)'}`,
-      background: picked ? 'var(--bg-2)' : 'transparent',
-      color: 'inherit',
-      cursor: 'pointer',
-      textAlign: 'left',
-      width: '100%',
-      marginBottom: -1,
-      transition: 'all 140ms',
-    }}
-  >
-    <ImgSlot slot={`collab.${item.kind}.${item.name.replace(/[^a-z0-9]/gi, '').toLowerCase()}`} label={`${item.kind} · ${item.name}`} group={`collab · ${item.kind}s`} style={{ width: 48, height: 48, fontSize: 8 }}>
-      logo
-    </ImgSlot>
-    <div>
-      <div style={{ fontSize: 'calc(15px * var(--scale))', letterSpacing: '-0.01em' }}>{item.name}</div>
-      <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', marginTop: 2 }}>
-        {item.kind} · {item.cat} {item.since ? `· est. ${item.since}` : item.reach ? `· reach ${item.reach}` : ''}
-      </div>
-    </div>
-    <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', maxWidth: 260, textAlign: 'right' }}>
-      {item.note}
-    </div>
-    <div style={{ width: 100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: 'var(--fg-3)', marginBottom: 4 }}>
-        <span>fit</span>
-        <span className="tabular" style={{ color: 'var(--fg)' }}>{item.fit}</span>
-      </div>
-      <div style={{ height: 2, background: 'var(--line)' }}>
-        <div style={{ height: '100%', width: `${item.fit}%`, background: 'var(--accent)' }} />
-      </div>
-    </div>
-    <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: item.open ? 'var(--fg)' : 'var(--fg-3)' }}>
-      {item.open ? '● offen' : '○ warteliste'}
-    </div>
-  </button>
-);
-
-// Mobile card: vertical, feed-style
-const MobileCard = ({ item, onPick, picked }) => (
-  <button
-    onClick={onPick}
-    className="collab-card-mobile"
-    style={{
-      display: 'block',
-      padding: 18,
-      border: `1px solid ${picked ? 'var(--fg)' : 'var(--line)'}`,
-      background: picked ? 'var(--bg-2)' : 'var(--bg)',
-      color: 'inherit',
-      cursor: 'pointer',
-      textAlign: 'left',
-      width: '100%',
-      marginBottom: 12,
-      transition: 'all 140ms',
-    }}
-  >
-    {/* top row: logo + name + status */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-      <ImgSlot slot={`collab.${item.kind}.${item.name.replace(/[^a-z0-9]/gi, '').toLowerCase()}`} label={`${item.kind} · ${item.name}`} group={`collab · ${item.kind}s`} style={{ width: 52, height: 52, fontSize: 8, flexShrink: 0 }}>
-        logo
-      </ImgSlot>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 'calc(17px * var(--scale))', letterSpacing: '-0.01em', marginBottom: 3 }}>{item.name}</div>
-        <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          {item.kind} · {item.cat}
-        </div>
-      </div>
-      <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.12em', color: item.open ? 'var(--accent)' : 'var(--fg-3)', flexShrink: 0 }}>
-        {item.open ? '● offen' : '○ warte'}
-      </div>
-    </div>
-
-    {/* note */}
-    <div style={{ fontSize: 'calc(13px * var(--scale))', color: 'var(--fg-2)', lineHeight: 1.5, marginBottom: 16 }}>
-      {item.note}
-    </div>
-
-    {/* stats row */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, paddingTop: 14, borderTop: '1px dashed var(--line)' }}>
-      <div>
-        <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: 'var(--fg-3)', marginBottom: 4 }}>
-          {item.since ? 'est.' : 'reach'}
-        </div>
-        <div className="tabular" style={{ fontSize: 'calc(14px * var(--scale))' }}>
-          {item.since || item.reach}
-        </div>
-      </div>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: 'var(--fg-3)', marginBottom: 4 }}>
-          <span>fit</span>
-          <span className="tabular" style={{ color: 'var(--fg)' }}>{item.fit}</span>
-        </div>
-        <div style={{ height: 3, background: 'var(--line)', marginTop: 8 }}>
-          <div style={{ height: '100%', width: `${item.fit}%`, background: 'var(--accent)' }} />
-        </div>
-      </div>
-    </div>
-  </button>
-);
-
-const Row = ({ item, onPick, picked }) => (
-  <>
-    <div className="mobile-hide-inline">
-      <DesktopRow item={item} onPick={onPick} picked={picked} />
-    </div>
-    <div className="desktop-hide-inline">
-      <MobileCard item={item} onPick={onPick} picked={picked} />
-    </div>
-  </>
-);
-
-const Collab = () => {
-  const [mode, setMode] = React.useState('brands'); // brands | creators
-  const [picked, setPicked] = React.useState(null);
-  const data = mode === 'brands' ? BRANDS : CREATORS;
-  const pickedItem = data.find(d => d.name === picked);
+const Collab = ({ lang = 'en', onConfig, onBack }) => {
+  const t = COLLAB_T[lang] || COLLAB_T.en;
+  const [filter, setFilter] = React.useState(0); // 0 all, 1 brands, 2 creators
+  const kinds = [null, 'brands', 'creators'];
+  const filtered = t.cards.filter(c => !kinds[filter] || c.kind === kinds[filter]);
 
   return (
-    <div className="page-pad" style={{ padding: '80px 32px 48px', maxWidth: 1440, margin: '0 auto' }}>
+    <div className="page-pad" style={{ padding: '96px 32px 48px', maxWidth: 1440, margin: '0 auto' }}>
       <div style={{ paddingBottom: 20, borderBottom: '1px solid var(--line)', marginBottom: 28 }}>
-        <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.2em', marginBottom: 12 }}>
-          [ kollaboration / matrix ]
+        <div style={{ marginBottom: 12 }}>
+          <BackKicker lang={lang} onClick={onBack} />
         </div>
-        <h2 style={{ fontSize: 'calc(28px * var(--scale))', fontWeight: 400, letterSpacing: '-0.02em' }}>
-          finde, wer deine <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>sprache</span> spricht.
+        <h2 style={{ fontSize: 'calc(30px * var(--scale))', letterSpacing: '-0.02em' }}>
+          {t.h2a} <span className="word-em" style={{ fontSize: '1.05em', color: 'var(--accent)', textTransform: 'none' }}>{t.h2b}</span>.
         </h2>
       </div>
 
-      {/* toggle */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid var(--line)', marginBottom: 20 }}>
-        {['brands', 'creators'].map(m => (
-          <button key={m}
-            onClick={() => setMode(m)}
+      {/* Featured: What The Gummies */}
+      <div className="m-stack" style={{
+        display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 0,
+        border: '2px solid var(--fg)', marginBottom: 28,
+      }}>
+        <ImgSlot slot="collab.featured.wtg" label="collab · what the gummies hero" group="collab" style={{ minHeight: 240 }}>
+          what the gummies · hero
+        </ImgSlot>
+        <div style={{ padding: '26px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ fontSize: 'calc(9px * var(--scale))', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+            ★ {t.featuredTag}
+          </div>
+          <h3 style={{ fontSize: 'calc(34px * var(--scale))', lineHeight: 1, letterSpacing: '-0.02em' }}>
+            {t.wtgName}
+          </h3>
+          <p style={{ color: 'var(--fg-2)', fontSize: 'calc(13px * var(--scale))', lineHeight: 1.65, maxWidth: 520 }}>
+            {t.wtgDesc}
+          </p>
+          <button onClick={onConfig} style={{
+            alignSelf: 'flex-start',
+            padding: '13px 22px', minHeight: 44,
+            background: 'var(--fg)', color: 'var(--bg)',
+            fontSize: 'calc(11px * var(--scale))', fontWeight: 700,
+            letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer',
+          }}>
+            {t.wtgCta}
+          </button>
+        </div>
+      </div>
+
+      {/* filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+        {t.filter.map((f, i) => (
+          <button key={f} onClick={() => setFilter(i)}
             style={{
-              padding: '16px 12px',
-              background: mode === m ? 'var(--fg)' : 'transparent',
-              color: mode === m ? 'var(--bg)' : 'var(--fg-2)',
-              cursor: 'pointer',
-              fontSize: 'calc(13px * var(--scale))',
-              letterSpacing: '0.02em',
-              borderRight: m === 'brands' ? '1px solid var(--line)' : 'none',
-              minHeight: 48,
-            }}
-          >
-            {m === 'brands' ? 'marken' : 'creator'} · {m === 'brands' ? BRANDS.length : CREATORS.length}
+              padding: '9px 16px', minHeight: 40,
+              border: `1px solid ${filter === i ? 'var(--fg)' : 'var(--line)'}`,
+              background: filter === i ? 'var(--fg)' : 'transparent',
+              color: filter === i ? 'var(--bg)' : 'var(--fg-2)',
+              fontSize: 'calc(11px * var(--scale))', cursor: 'pointer',
+            }}>
+            #{f}
           </button>
         ))}
       </div>
 
-      {/* rows */}
-      <div>
-        {data.map((d) => (
-          <Row key={d.name} item={d} picked={picked === d.name} onPick={() => setPicked(d.name)} />
+      {/* partner card grid */}
+      <div className="m-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        {filtered.map((c, i) => (
+          <article key={c.name} className="fade-up" style={{
+            border: '1px solid var(--line)', padding: 14,
+            display: 'flex', flexDirection: 'column', gap: 12,
+            animationDelay: `${i * 50}ms`, background: 'var(--bg)',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--fg-3)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--line)'}
+          >
+            <ImgSlot slot={c.slot} label={'collab · ' + c.name} group="collab" style={{ aspectRatio: '4/3' }}>
+              {c.name}
+            </ImgSlot>
+            <div>
+              <div style={{ fontSize: 'calc(15px * var(--scale))', fontWeight: 700, letterSpacing: '-0.01em' }}>{c.name}</div>
+              <div style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', marginTop: 3, letterSpacing: '0.05em' }}>{c.cat}</div>
+            </div>
+            <div style={{ color: 'var(--fg-2)', fontSize: 'calc(11px * var(--scale))', lineHeight: 1.5, flex: 1 }}>
+              {c.note}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
+              <span style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.1em', color: c.open ? 'var(--fg)' : 'var(--fg-3)' }}>
+                {c.open ? t.open : t.wait}
+              </span>
+              {c.open && (
+                <button onClick={onConfig} style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-2)', cursor: 'pointer', minHeight: 32 }}>
+                  {t.request}
+                </button>
+              )}
+            </div>
+          </article>
         ))}
-      </div>
-
-      {/* pairing detail */}
-      <div className="collab-pairing" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <div style={{ padding: 24, border: '1px solid var(--line)' }}>
-          <div style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em', marginBottom: 12 }}>
-            [ co-drop concept ]
-          </div>
-          <div style={{ fontSize: 'calc(22px * var(--scale))', lineHeight: 1.25, letterSpacing: '-0.01em', marginBottom: 20 }}>
-            {picked || 'pulmoll'} × @foodcreator.hh
-          </div>
-          <div style={{ color: 'var(--fg-2)', fontSize: 'calc(13px * var(--scale))', lineHeight: 1.7 }}>
-            funktionale lozenges, re-interpretiert als snackable-format. co-branded verpackung, shared upside, launch über spätciety-drop.
-          </div>
-          <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, fontSize: 'calc(11px * var(--scale))' }}>
-            <div>
-              <div style={{ color: 'var(--fg-3)', letterSpacing: '0.12em', marginBottom: 4 }}>timeline</div>
-              <div>~6 wochen</div>
-            </div>
-            <div>
-              <div style={{ color: 'var(--fg-3)', letterSpacing: '0.12em', marginBottom: 4 }}>moq</div>
-              <div className="tabular">5.000</div>
-            </div>
-            <div>
-              <div style={{ color: 'var(--fg-3)', letterSpacing: '0.12em', marginBottom: 4 }}>split</div>
-              <div>50 / 50</div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ padding: 24, background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
-          <div style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em', marginBottom: 12 }}>
-            [ anfrage senden ]
-          </div>
-          <textarea
-            defaultValue="hey pulmoll — ich entwickle gerade eine sour-pickle gummy-serie und sehe eine schnittmenge zwischen eurem hals/cough-heritage und meinem culinary-publikum. lass uns über einen co-drop sprechen?"
-            style={{
-              width: '100%',
-              minHeight: 120,
-              background: 'var(--bg)',
-              border: '1px solid var(--line)',
-              padding: 12,
-              color: 'var(--fg)',
-              fontFamily: 'inherit',
-              fontSize: 'calc(12px * var(--scale))',
-              resize: 'vertical',
-              lineHeight: 1.6,
-            }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em' }}>
-              antwort in ~3 werktagen
-            </span>
-            <button style={{
-              padding: '14px 22px',
-              background: 'var(--accent)', color: 'var(--accent-ink)',
-              border: 'none', cursor: 'pointer',
-              fontSize: 'calc(12px * var(--scale))', fontWeight: 700, letterSpacing: '0.05em',
-              minHeight: 44,
-            }}>
-              → senden
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>foofab — turn potential into product</title>
+<title>foodciety — turn potential into product</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&amp;display=swap" rel="stylesheet">
@@ -55,19 +55,19 @@
 // Tweakable defaults — rewritten on disk by the host
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "theme": "light",
-  "accent": "terracotta",
+  "accent": "rose",
   "typeScale": "medium"
 }/*EDITMODE-END*/;
 </script>
 <style>
   :root {
-    /* warm cream default (brand pdf) — lighter, less technical */
-    --bg: #ece9e2;
-    --bg-2: #e0ddd4;
-    --fg: #16140f;
-    --fg-2: #4a4740;
-    --fg-3: #8a867c;
-    --line: #cbc7bc;
+    /* clean white base */
+    --bg: #ffffff;
+    --bg-2: #f5f4f1;
+    --fg: #111111;
+    --fg-2: #454545;
+    --fg-3: #8c8c8c;
+    --line: #e2e0dc;
     --accent: oklch(0.72 0.14 50);        /* warm terracotta */
     --accent-ink: #16140f;
     --scale: 1;
@@ -196,6 +196,12 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   }
   @keyframes blink { 50% { opacity: 0; } }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes orb-rotate { to { transform: rotate(360deg); } }
+  @keyframes orb-rotate-rev { to { transform: rotate(-360deg); } }
+  @keyframes orb-glow {
+    0%, 100% { box-shadow: 0 24px 60px rgba(17,17,17,0.35), 0 0 0 0 rgba(17,17,17,0.0), inset 0 1px 1px rgba(255,255,255,0.25); }
+    50%      { box-shadow: 0 24px 60px rgba(17,17,17,0.45), 0 0 46px 6px rgba(17,17,17,0.18), inset 0 1px 1px rgba(255,255,255,0.25); }
+  }
   @keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); } }
 
   .fade-up { animation: fadeUp 0.7s cubic-bezier(.2,.8,.2,1) both; animation-fill-mode: forwards; opacity: 1; }
@@ -437,7 +443,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   .nav-burger { display: none; }
 </style>
 </head>
-<body data-cc-id="cc-1" style="background-color: rgb(255, 255, 255); cursor: crosshair;">
+<body>
 <template id="__bundler_thumbnail">
 <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="400" fill="#0a0a0a"></rect>
@@ -447,7 +453,17 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   <text x="200" y="330" text-anchor="middle" fill="#f2f1ed" font-family="monospace" font-size="18" letter-spacing="4">foofab</text>
 </svg>
 </template>
-<div id="root"><nav class="nav" data-screen-label="hub"><button class="nav-brand" style="display: flex; align-items: center; gap: 10px;"><img src="assets/foofab-logo.png" alt="foofab" style="height: 22px; width: auto; display: block;"></button><div class="nav-links"><button>about</button><button class="">turn potential</button><button>impressum</button></div></nav><div style="padding: 96px 32px 48px; max-width: 1440px; margin: 0px auto;" data-cc-id="cc-1"><div style="display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--line);"><div><div style="color: var(--fg-3); font-size: calc(11px * var(--scale)); letter-spacing: 0.2em; margin-bottom: 20px;">[ 002 / turn potential ]</div><h2 style="font-size: calc(36px * var(--scale)); font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; max-width: 820px;">wir geben dir verschiedene<br>wege, menschen zu <span class="word-em" style="font-size: 1.1em; color: var(--accent);">begeistern</span>.</h2></div><div style="text-align: right; color: var(--fg-2); font-size: calc(11px * var(--scale)); line-height: 1.7;"><div>sour pickle gummies</div><div>+ external cheese pairing</div><div style="color: var(--fg-3);">— demo account: @foodcreator.hh</div></div></div><div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;"><button style="text-align: left; padding: 24px; border: 1px solid var(--line); background: transparent; display: flex; flex-direction: column; gap: 20px; transition: 200ms cubic-bezier(0.2, 0.8, 0.2, 1); position: relative; cursor: pointer; color: inherit; min-height: 460px;"><div style="display: flex; justify-content: space-between; align-items: center; font-size: calc(10px * var(--scale)); letter-spacing: 0.15em; color: var(--fg-3);"><span>[ 01 / configure ]</span><svg width="12" height="12" viewBox="0 0 16 16" style="transform: rotate(270deg); flex-shrink: 0;"><path d="M 2 8 L 14 8 M 9 3 L 14 8 L 9 13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="square"></path></svg></div><div class="placeholder" style="height: 220px; flex-shrink: 0;"><div style="position: absolute; inset: 0px; display: flex; align-items: center; justify-content: center;"><div style="width: 64px; height: 64px; border-radius: 50%; background: var(--bg); border: 1px solid var(--fg-3); display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 64 64" fill="none"><path d="M32 10 V 30" stroke="var(--fg)" stroke-width="5" stroke-linecap="square"></path><path d="M 20 18 A 16 16 0 1 0 44 18" stroke="var(--fg)" stroke-width="5" stroke-linecap="square" fill="none"></path></svg></div></div><span style="position: absolute; bottom: 8px; left: 10px;">placeholder / process diagram</span></div><div style="flex: 1 1 0%; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;"><div><h3 style="font-size: calc(28px * var(--scale)); font-weight: 400; letter-spacing: -0.02em; margin-bottom: 12px; line-height: 1.15;">konfiguriere.</h3><p style="color: var(--fg-2); font-size: calc(12px * var(--scale)); line-height: 1.6;">starte von einem basis-produkt. wähle form, geschmack, verpackung. lauf in 24 stunden durch den konfigurator, in tagen statt monaten am markt.</p></div><div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px dashed var(--line);"><span style="font-size: calc(10px * var(--scale)); color: var(--fg-3); letter-spacing: 0.1em;">öffnen</span><svg width="14" height="14" viewBox="0 0 16 16" style="transform: rotate(0deg); flex-shrink: 0;"><path d="M 2 8 L 14 8 M 9 3 L 14 8 L 9 13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="square"></path></svg></div></div></button><button style="text-align: left; padding: 24px; border-color: var(--line); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; background: transparent; display: flex; flex-direction: column; gap: 20px; transition: 200ms cubic-bezier(0.2, 0.8, 0.2, 1); position: relative; cursor: pointer; color: inherit; min-height: 460px;"><div style="display: flex; justify-content: space-between; align-items: center; font-size: calc(10px * var(--scale)); letter-spacing: 0.15em; color: var(--fg-3);"><span>[ 02 / inspire ]</span><svg width="12" height="12" viewBox="0 0 16 16" style="transform: rotate(270deg); flex-shrink: 0;"><path d="M 2 8 L 14 8 M 9 3 L 14 8 L 9 13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="square"></path></svg></div><div class="placeholder" style="height: 220px; flex-shrink: 0;"><div style="position: absolute; inset: 0px; display: flex; align-items: center; justify-content: center;"><div style="width: 64px; height: 64px; border-radius: 50%; background: var(--bg); border: 1px solid var(--fg-3); display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 64 64" fill="none"><path d="M32 10 V 30" stroke="var(--fg)" stroke-width="5" stroke-linecap="square"></path><path d="M 20 18 A 16 16 0 1 0 44 18" stroke="var(--fg)" stroke-width="5" stroke-linecap="square" fill="none"></path></svg></div></div><span style="position: absolute; bottom: 8px; left: 10px;">placeholder / trend feed</span></div><div style="flex: 1 1 0%; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;"><div><h3 style="font-size: calc(28px * var(--scale)); font-weight: 400; letter-spacing: -0.02em; margin-bottom: 12px; line-height: 1.15;">inspiriere dich.</h3><p style="color: var(--fg-2); font-size: calc(12px * var(--scale)); line-height: 1.6;">live-feed aus trending drops, community-briefs und kategorien, die gerade durchstarten. lass dich von uns inspirieren und entwickle dein eigenes ding.</p></div><div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px dashed var(--line);"><span style="font-size: calc(10px * var(--scale)); color: var(--fg-3); letter-spacing: 0.1em;">öffnen</span><svg width="14" height="14" viewBox="0 0 16 16" style="transform: rotate(0deg); flex-shrink: 0;"><path d="M 2 8 L 14 8 M 9 3 L 14 8 L 9 13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="square"></path></svg></div></div></button><button style="text-align: left; padding: 24px; border-color: var(--line); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; background: transparent; display: flex; flex-direction: column; gap: 20px; transition: 200ms cubic-bezier(0.2, 0.8, 0.2, 1); position: relative; cursor: pointer; color: inherit; min-height: 460px;"><div style="display: flex; justify-content: space-between; align-items: center; font-size: calc(10px * var(--scale)); letter-spacing: 0.15em; color: var(--fg-3);"><span>[ 03 / collab ]</span><svg width="12" height="12" viewBox="0 0 16 16" style="transform: rotate(270deg); flex-shrink: 0;"><path d="M 2 8 L 14 8 M 9 3 L 14 8 L 9 13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="square"></path></svg></div><div class="placeholder" style="height: 220px; flex-shrink: 0;"><div style="position: absolute; inset: 0px; display: flex; align-items: center; justify-content: center;"><div style="width: 64px; height: 64px; border-radius: 50%; background: var(--bg); border: 1px solid var(--fg-3); display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 64 64" fill="none"><path d="M32 10 V 30" stroke="var(--fg)" stroke-width="5" stroke-linecap="square"></path><path d="M 20 18 A 16 16 0 1 0 44 18" stroke="var(--fg)" stroke-width="5" stroke-linecap="square" fill="none"></path></svg></div></div><span style="position: absolute; bottom: 8px; left: 10px;">placeholder / partner matrix</span></div><div style="flex: 1 1 0%; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;"><div><h3 style="font-size: calc(28px * var(--scale)); font-weight: 400; letter-spacing: -0.02em; margin-bottom: 12px; line-height: 1.15;">kollaboriere.</h3><p style="color: var(--fg-2); font-size: calc(12px * var(--scale)); line-height: 1.6;">finde marken und creator, die deine sprache sprechen. co-branded launches mit etablierten häusern — pulmoll, ronnefeldt und weiteren.</p></div><div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px dashed var(--line);"><span style="font-size: calc(10px * var(--scale)); color: var(--fg-3); letter-spacing: 0.1em;">öffnen</span><svg width="14" height="14" viewBox="0 0 16 16" style="transform: rotate(0deg); flex-shrink: 0;"><path d="M 2 8 L 14 8 M 9 3 L 14 8 L 9 13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="square"></path></svg></div></div></button></div><div style="margin-top: 48px; padding: 32px 0px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;"><div><div class="tabular" style="font-size: calc(32px * var(--scale)); font-weight: 700; letter-spacing: -0.02em; line-height: 1;">18,000</div><div style="margin-top: 10px; color: var(--fg-3); font-size: calc(10px * var(--scale)); letter-spacing: 0.12em;">units · 24h launch</div></div><div><div class="tabular" style="font-size: calc(32px * var(--scale)); font-weight: 700; letter-spacing: -0.02em; line-height: 1;">5M+</div><div style="margin-top: 10px; color: var(--fg-3); font-size: calc(10px * var(--scale)); letter-spacing: 0.12em;">views · organic reach</div></div><div><div class="tabular" style="font-size: calc(32px * var(--scale)); font-weight: 700; letter-spacing: -0.02em; line-height: 1;">~75%</div><div style="margin-top: 10px; color: var(--fg-3); font-size: calc(10px * var(--scale)); letter-spacing: 0.12em;">hook rate</div></div><div><div class="tabular" style="font-size: calc(32px * var(--scale)); font-weight: 700; letter-spacing: -0.02em; line-height: 1;">71%</div><div style="margin-top: 10px; color: var(--fg-3); font-size: calc(10px * var(--scale)); letter-spacing: 0.12em;">creator gross margin</div></div></div><div style="margin-top: 48px; display: flex; justify-content: space-between; color: var(--fg-3); font-size: calc(10px * var(--scale)); letter-spacing: 0.15em;"><span>pipeline / 150 concepts</span><span>→ scroll</span><span>creators / 50 live</span></div></div><div class="tweaks-panel open"><div class="tweaks-head"><span>tweaks</span><button aria-label="close"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M 3 3 L 13 13 M 13 3 L 3 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="square"></path></svg></button></div><div class="tweaks-body"><div class="tweaks-row"><label>accent</label><div class="tweaks-opts"><div class="swatch active" title="terracotta" style="background: oklch(0.72 0.14 50);"></div><div class="swatch " title="olive" style="background: oklch(0.66 0.1 115);"></div><div class="swatch " title="rose" style="background: oklch(0.72 0.14 15);"></div><div class="swatch " title="ink" style="background: rgb(22, 20, 15);"></div><div class="swatch " title="amber" style="background: oklch(0.78 0.13 75);"></div></div></div><div class="tweaks-row"><label>type scale</label><div class="tweaks-opts"><button class="">small</button><button class="active">medium</button><button class="">large</button></div></div></div></div></div>
+<div id="root">
+  <!-- boot placeholder — replaced the moment React mounts. Never put a
+       page snapshot here: it flashes stale content on every reload. -->
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--bg);">
+    <img src="assets/foodciety-logo.png" alt="foodciety" style="height:22px;width:auto;display:block;">
+    <div style="display:flex;align-items:center;gap:8px;color:var(--fg-3);font-size:10px;letter-spacing:0.22em;">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.2s step-end infinite;"></span>
+      loading
+    </div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>

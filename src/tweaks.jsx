@@ -145,7 +145,7 @@ const Tweaks = ({ open, onClose, settings, setSettings, images, setImages, image
 
         {slots.length === 0 && (
           <div style={{ color: 'var(--fg-3)', fontSize: 10, padding: '8px 0', letterSpacing: '0.08em' }}>
-            navigiere zwischen den seiten — bild-slots erscheinen hier, sobald sie sichtbar werden.
+            navigiere zwischen den seiten. bild-slots erscheinen hier, sobald sie sichtbar werden.
           </div>
         )}
 
@@ -244,7 +244,7 @@ const Tweaks = ({ open, onClose, settings, setSettings, images, setImages, image
               lineHeight: 1.5, letterSpacing: '0.02em',
             }}>
               lädt alle hochgeladenen bilder einzeln herunter.
-              in deinem repo unter <code style={{ background: 'var(--bg-2)', padding: '1px 4px' }}>assets/images/</code> ablegen und pushen — dann sehen alle besucher die bilder.
+              in deinem repo unter <code style={{ background: 'var(--bg-2)', padding: '1px 4px' }}>assets/images/</code> ablegen und pushen. dann sehen alle besucher die bilder.
             </div>
           </div>
         )}
@@ -284,7 +284,7 @@ const Tweaks = ({ open, onClose, settings, setSettings, images, setImages, image
               textAlign: 'right', maxWidth: 120, lineHeight: 1.3,
             }}>
               {imagesSaveState === 'error'
-                ? 'speicher voll — bilder entfernen'
+                ? 'speicher voll. bilder entfernen'
                 : imagesSaveState === 'dirty'
                 ? 'ungespeicherte änderungen'
                 : 'auto-komprimiert · max 900px'}

@@ -19,31 +19,30 @@ const FLAVORS = [
 ];
 
 const PACKAGES = [
-  { id: 'pouch',    label: 'doypack',      bases: ['gummies', 'hard candy'] },
-  { id: 'jar',      label: 'glas',         bases: ['gummies', 'hard candy'] },
-  { id: 'tin',      label: 'dose',         bases: ['gummies', 'hard candy'] },
-  { id: 'pulmoll',  label: 'pulmoll dose', bases: ['hard candy', 'pulmoll'] },
-  { id: 'tube',     label: 'tube',         bases: ['hard candy'] },
-  { id: 'calendar', label: 'kalender',     bases: ['adventskalender'] },
-  { id: 'bar',      label: 'riegel-box',   bases: ['bars'] },
+  { id: 'pouch',    label: 'doypack',    bases: ['gummies', 'hard candy', 'nuts'] },
+  { id: 'jar',      label: 'jar',        bases: ['gummies', 'hard candy', 'nuts'] },
+  { id: 'tin',      label: 'tin',        bases: ['gummies', 'hard candy', 'nuts'] },
+  { id: 'tube',     label: 'tube',       bases: ['hard candy'] },
+  { id: 'calendar', label: 'calendar',   bases: ['advent calendar'] },
+  { id: 'bar',      label: 'choc bar',   bases: ['chocolate bars'] },
 ];
 
 // Pick a sensible default pack for each base category
 const DEFAULT_PACK_FOR_BASE = {
   'gummies': 'pouch',
   'hard candy': 'tin',
-  'pulmoll': 'pulmoll',
-  'adventskalender': 'calendar',
-  'bars': 'bar',
+  'advent calendar': 'calendar',
+  'chocolate bars': 'bar',
+  'nuts': 'jar',
 };
 
 const STEPS = [
-  { k: '01', id: 'base',    label: 'basis' },
-  { k: '02', id: 'shape',   label: 'form' },
-  { k: '03', id: 'flavor',  label: 'geschmack' },
-  { k: '04', id: 'pack',    label: 'verpackung' },
-  { k: '05', id: 'brand',   label: 'branding' },
-  { k: '06', id: 'review',  label: 'launch' },
+  { k: '01', id: 'base',    label: 'base',      de: 'basis' },
+  { k: '02', id: 'shape',   label: 'shape',     de: 'form' },
+  { k: '03', id: 'flavor',  label: 'flavor',    de: 'geschmack' },
+  { k: '04', id: 'pack',    label: 'packaging', de: 'verpackung' },
+  { k: '05', id: 'brand',   label: 'branding',  de: 'branding' },
+  { k: '06', id: 'review',  label: 'drop it',   de: 'drop it' },
 ];
 
 const Chip = ({ active, onClick, children, style }) => (
@@ -1042,7 +1041,7 @@ const LaunchOverlay = ({ cfg, onClose }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 32px', position: 'relative', zIndex: 2 }}>
         <Wordmark height={22} />
         <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--fg-2)', fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.1em' }}>
-          <Cross /> zurück zum editor
+          <Cross /> back to editor
         </button>
       </div>
 
@@ -1055,32 +1054,20 @@ const LaunchOverlay = ({ cfg, onClose }) => {
         {/* left: copy */}
         <div>
           <div style={{ color: 'var(--accent)', fontSize: 'calc(12px * var(--scale))', letterSpacing: '0.3em', marginBottom: 20, animation: 'blink 1.4s step-end infinite' }}>
-            ● live · drop #DRP-0124
+            ● idea received · #DRP-0124
           </div>
           <h1 style={{ fontSize: 'clamp(48px, 7vw, 110px)', lineHeight: 0.9, letterSpacing: '-0.03em', marginBottom: 24 }}>
-            it's<br/><span className="word-em" style={{ color: 'var(--accent)' }}>live.</span>
+            idea<br/><span className="word-em" style={{ color: 'var(--accent)' }}>dropped.</span>
           </h1>
           <p style={{ color: 'var(--fg-2)', fontSize: 'calc(15px * var(--scale))', lineHeight: 1.6, maxWidth: 420, marginBottom: 32 }}>
-            <strong style={{ color: 'var(--fg)' }}>{cfg.name}</strong> ist eingereicht. foofab reviewed deinen drop & meldet sich in 24h — dann geht's in die produktion.
+            <strong style={{ color: 'var(--fg)' }}>{cfg.name}</strong> is in. the foodciety team reviews your drop and gets back to you within 48h. then it goes into production.
           </p>
-          <div className="launch-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, maxWidth: 460 }}>
-            {[
-              [cfg.units.toLocaleString('de-DE'), 'einheiten'],
-              ['€' + grossRev.toLocaleString('de-DE'), 'umsatz-potenzial'],
-              ['71%', 'marge'],
-            ].map(([k, v], i) => (
-              <div key={i}>
-                <div className="tabular" style={{ fontSize: 'calc(30px * var(--scale))', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }}>{k}</div>
-                <div style={{ marginTop: 8, color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.12em' }}>{v}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 36, flexWrap: 'wrap' }}>
-            {['↗ teilen', '◷ status', '⊕ neuer drop'].map((t, i) => (
-              <button key={i} onClick={i === 2 ? onClose : undefined} style={{
+          <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+            {['↗ share', '⊕ new drop'].map((t, i) => (
+              <button key={i} onClick={i === 1 ? onClose : undefined} style={{
                 padding: '14px 22px',
-                background: i === 0 ? 'var(--accent)' : 'transparent',
-                color: i === 0 ? 'var(--accent-ink)' : 'var(--fg)',
+                background: i === 0 ? 'var(--fg)' : 'transparent',
+                color: i === 0 ? 'var(--bg)' : 'var(--fg)',
                 border: i === 0 ? 'none' : '1px solid var(--line)',
                 fontSize: 'calc(12px * var(--scale))', fontWeight: 700, letterSpacing: '0.05em',
                 cursor: 'pointer', minHeight: 44,
@@ -1100,12 +1087,16 @@ const LaunchOverlay = ({ cfg, onClose }) => {
   );
 };
 
-const Configurator = () => {
+const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
   const LS_KEY = 'foofab-cfg-v1';
   const INITIAL_CFG = {
     base: 'gummies',
     shape: 'pickle',
-    flavor: 'sour-pickle',
+    shapeId: 'KC00009',
+    shapeName: 'Herzen',
+    shapeImg: 'https://helper.suesse-werbung.de/sonderformen/img/KC00009_a.jpg',
+    flavor: 'raspberry',
+    flavorDe: 'Himbeere',
     pack: 'pouch',
     color: '#7a9a3a',
     name: 'sauer & käse',
@@ -1114,14 +1105,43 @@ const Configurator = () => {
     density: 9,
     units: 5000,
   };
-  const [step, setStep] = React.useState(0);
+  const [step, setStep] = React.useState(initialStep);
   const [cfg, setCfg] = React.useState(() => {
     try {
       const saved = localStorage.getItem(LS_KEY);
-      if (saved) return { ...INITIAL_CFG, ...JSON.parse(saved) };
+      if (saved) {
+        const merged = { ...INITIAL_CFG, ...JSON.parse(saved) };
+        // legacy base category migrated to chocolate bars
+        if (merged.base === 'bars') merged.base = 'chocolate bars';
+        return merged;
+      }
     } catch (e) {}
     return INITIAL_CFG;
   });
+
+  // Shapes catalogue (CSV) + flavors (XLSX) — loaded from bundled JSON
+  const [shapesData, setShapesData] = React.useState([]);
+  const [flavorsData, setFlavorsData] = React.useState([]);
+  const [shapeCat, setShapeCat] = React.useState('alle');
+  const [shapeSearch, setShapeSearch] = React.useState('');
+  const [flavorSearch, setFlavorSearch] = React.useState('');
+  React.useEffect(() => {
+    fetch('assets/shapes.json').then(r => r.json()).then(setShapesData).catch(() => {});
+    fetch('assets/flavors.json').then(r => r.json()).then(setFlavorsData).catch(() => {});
+  }, []);
+  const shapesFiltered = React.useMemo(() => {
+    const q = shapeSearch.trim().toLowerCase();
+    return shapesData.filter(s =>
+      (shapeCat === 'alle' || s.cat === shapeCat) &&
+      (!q || s.name.toLowerCase().includes(q))
+    );
+  }, [shapesData, shapeCat, shapeSearch]);
+  const flavorsFiltered = React.useMemo(() => {
+    const q = flavorSearch.trim().toLowerCase();
+    return flavorsData.filter(f =>
+      !q || f.de.toLowerCase().includes(q) || f.en.toLowerCase().includes(q)
+    );
+  }, [flavorsData, flavorSearch]);
 
   // Persist cfg (incl. uploaded logo + photo data URLs) to localStorage
   React.useEffect(() => {
@@ -1174,20 +1194,22 @@ const Configurator = () => {
         body: JSON.stringify({ prompt }),
       });
       if (!res.ok) {
-        let errDetail = '';
-        try { const j = await res.json(); errDetail = j?.error || ''; } catch {}
-        if (res.status === 404) throw new Error('404 — /api/generate nicht gefunden. Läuft das auf Vercel? Lokal brauchst du "vercel dev".');
-        if (res.status === 500 && errDetail.includes('GOOGLE_API_KEY')) throw new Error('GOOGLE_API_KEY fehlt — in Vercel unter Settings → Environment Variables setzen.');
-        throw new Error(`fehler ${res.status}${errDetail ? ': ' + errDetail : ''}`);
+        if (res.status === 404) throw new Error('proxy not found. works on the live site (vercel), not in preview');
+        throw new Error('server-fehler ' + res.status);
       }
       const data = await res.json();
-      // Nano Banana 2 returns inline base64 → bereits eine data URL, kein Proxy nötig.
-      const imageUrl = data?.imageUrl;
-      if (!imageUrl) throw new Error('kein bild erhalten — response: ' + JSON.stringify(data));
-      setCfg(prev => ({ ...prev, labelBgUrl: imageUrl }));
+      // api/generate.js responds { imageUrl } — normally a base64 data URL
+      // (already same-origin safe). External URLs (raw-URL fallback or older
+      // response shapes) go through the /api/image proxy, because the image
+      // host sends no CORS headers and a direct load would taint the texture.
+      const url = data?.imageUrl || data?.data?.images?.[0]?.url || data?.images?.[0]?.url;
+      if (!url) throw new Error('keine bild-url erhalten');
+      setCfg(prev => ({ ...prev, labelBgUrl: url.startsWith('data:') ? url : '/api/image?url=' + encodeURIComponent(url) }));
     } catch (e) {
+      // Preview has no backend → demo the mapping with a bundled placeholder
+      // so the label texture pipeline is testable without the live proxy.
       setCfg(prev => ({ ...prev, labelBgUrl: 'assets/label-placeholder.webp' }));
-      setGenError(e?.message || 'unbekannter fehler');
+      setGenError('preview: proxy not reachable. showing placeholder artwork (real call works live on vercel)');
     } finally {
       setGenLoading(false);
     }
@@ -1221,7 +1243,6 @@ const Configurator = () => {
     { c: '#7a9a3a', l: 'dill green' },
     { c: '#f2c94c', l: 'lemon' },
     { c: '#c85250', l: 'paprika' },
-    { c: '#c8102e', l: 'pulmoll rot' },
     { c: '#8b5a3c', l: 'amber' },
     { c: '#e8e6e0', l: 'milk' },
     { c: '#3a3937', l: 'squid ink' },
@@ -1232,16 +1253,16 @@ const Configurator = () => {
       {/* header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', paddingBottom: 20, borderBottom: '1px solid var(--line)', marginBottom: 32 }}>
         <div>
-          <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.2em', marginBottom: 12 }}>
-            [ konfigurator / 01 ]
+          <div style={{ marginBottom: 12 }}>
+            <BackKicker lang={lang} onClick={onBack} />
           </div>
           <h2 style={{ fontSize: 'calc(28px * var(--scale))', fontWeight: 400, letterSpacing: '-0.02em' }}>
-            von der community zum produkt — in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>tagen statt monaten</span>.
+            {lang === 'de' ? <>von der community zum produkt. in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>tagen statt monaten</span>.</> : <>from community to product. in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>days, not months</span>.</>}
           </h2>
         </div>
         <div style={{ textAlign: 'right', fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', letterSpacing: '0.08em' }}>
-          <div>entwurf · #DRP-0124</div>
-          <div style={{ color: 'var(--fg-3)' }}>auto-gespeichert · gerade eben</div>
+          <div>{lang === 'de' ? 'entwurf' : 'draft'} · #DRP-0124</div>
+          <div style={{ color: 'var(--fg-3)' }}>{lang === 'de' ? 'auto-gespeichert · gerade eben' : 'auto-saved · just now'}</div>
         </div>
       </div>
 
@@ -1268,7 +1289,7 @@ const Configurator = () => {
               {s.k}
             </div>
             <div style={{ fontSize: 'calc(13px * var(--scale))', color: step === i ? 'var(--fg)' : 'var(--fg-2)' }}>
-              {s.label}
+              {lang === 'de' ? s.de : s.label}
             </div>
           </button>
         ))}
@@ -1279,18 +1300,16 @@ const Configurator = () => {
         <div style={{ minHeight: 520 }}>
           {step === 0 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>wähle deine basis-kategorie</label>
+              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                {lang === 'de' ? 'wähle deine basis-kategorie' : 'pick your base category'}
+              </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginTop: 16 }}>
-                {['gummies', 'pulmoll', 'hard candy', 'adventskalender', 'bars'].map(b => (
+                {['gummies', 'chocolate bars', 'nuts', 'hard candy', 'advent calendar'].map(b => (
                   <button key={b}
                     onClick={() => {
                       // When switching base, auto-swap to a compatible package
                       const newPack = DEFAULT_PACK_FOR_BASE[b] || cfg.pack;
-                      // Auto-set Pulmoll red when selecting pulmoll, restore green when leaving
-                      const newColor = b === 'pulmoll' ? '#c8102e'
-                        : cfg.color === '#c8102e' ? '#7a9a3a'
-                        : cfg.color;
-                      setCfg({ ...cfg, base: b, pack: newPack, color: newColor });
+                      setCfg({ ...cfg, base: b, pack: newPack });
                     }}
                     style={{
                       textAlign: 'left',
@@ -1302,20 +1321,22 @@ const Configurator = () => {
                       transition: 'all 140ms',
                     }}
                   >
-                    <div style={{ fontSize: 'calc(20px * var(--scale))', fontWeight: 400, marginBottom: 6, letterSpacing: '-0.01em' }}>{b}</div>
+                    <div style={{ fontSize: 'calc(19px * var(--scale))', fontWeight: 700, marginBottom: 6, letterSpacing: '-0.01em' }}>{b}</div>
                     <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))' }}>
                       {b === 'gummies' && 'black forest · moq 1'}
-                      {b === 'pulmoll' && 'die pastille · classic'}
-                      {b === 'adventskalender' && '24 türchen · saisonal'}
-                      {b === 'hard candy' && 'krefeld · à la pulmoll'}
-                      {b === 'bars' && 'bavaria · bio-qualität'}
+                      {b === 'chocolate bars' && (lang === 'de' ? 'vielfältige formen & profile' : 'diverse shapes & profiles')}
+                      {b === 'nuts' && (lang === 'de' ? 'coated bis fully covered' : 'coated to fully covered')}
+                      {b === 'hard candy' && (lang === 'de' ? 'premium-formate · custom dosen' : 'premium formats · custom tins')}
+                      {b === 'advent calendar' && (lang === 'de' ? '24 türchen · saisonal' : '24 doors · seasonal')}
                     </div>
                   </button>
                 ))}
               </div>
 
               <div style={{ marginTop: 32 }}>
-                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>konzept-name</label>
+                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                  {lang === 'de' ? 'konzept-name' : 'concept name'}
+                </label>
                 <input
                   value={cfg.name}
                   onChange={e => setCfg({ ...cfg, name: e.target.value })}
@@ -1333,70 +1354,85 @@ const Configurator = () => {
                   }}
                 />
               </div>
-
-              {cfg.base === 'pulmoll' && (
-                <div style={{ marginTop: 20 }}>
-                  <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
-                    eigener produktname · optional
-                  </label>
-                  <div style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', marginTop: 4, marginBottom: 8, opacity: 0.6 }}>
-                    leer lassen → volles pulmoll design · text eingeben → ersetzt „die pastille"
-                  </div>
-                  <input
-                    value={cfg.pulmollName || ''}
-                    onChange={e => setCfg({ ...cfg, pulmollName: e.target.value })}
-                    placeholder="z.b. deine edition"
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '12px 14px',
-                      background: 'var(--bg-2)',
-                      border: '1px solid var(--line)',
-                      color: 'var(--fg)',
-                      fontFamily: 'inherit',
-                      fontSize: 'calc(16px * var(--scale))',
-                      textTransform: 'uppercase',
-                    }}
-                  />
-                </div>
-              )}
             </div>
           )}
 
           {step === 1 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>form</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 16 }}>
-                {SHAPES.map(s => (
-                  <button key={s.id}
-                    onClick={() => setCfg({ ...cfg, shape: s.id })}
+              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                {lang === 'de' ? 'form wählen' : 'pick a shape'} {shapesData.length ? `· ${shapesFiltered.length}/${shapesData.length}` : ''}
+              </label>
+
+              {/* category filter */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+                {['alle', 'Tiere', 'Essen/Trinken', 'Formen/Zeichen', 'Fahrzeuge', 'Hobby/Beruf', 'Mensch', 'Feiertage', 'Sonstiges'].map(c => (
+                  <button key={c}
+                    onClick={() => setShapeCat(c)}
                     style={{
-                      padding: 16,
-                      border: `1px solid ${cfg.shape === s.id ? 'var(--fg)' : 'var(--line)'}`,
-                      background: cfg.shape === s.id ? 'var(--bg-2)' : 'transparent',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                    }}
-                  >
-            <svg width={48} height={48} viewBox="0 0 64 64">
-                      <defs>
-                        <radialGradient id={`step-g-${s.id}`} cx="35%" cy="30%" r="70%">
-                          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
-                          <stop offset="30%" stopColor={cfg.color} stopOpacity="0.95" />
-                          <stop offset="100%" stopColor={cfg.color} stopOpacity="1" />
-                        </radialGradient>
-                      </defs>
-                      <path d={s.glyph} fill={`url(#step-g-${s.id})`} />
-                      <path d={s.glyph} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
-                    </svg>
-                    <span style={{ fontSize: 'calc(11px * var(--scale))' }}>{s.label}</span>
+                      padding: '7px 12px', minHeight: 34,
+                      border: `1px solid ${shapeCat === c ? 'var(--fg)' : 'var(--line)'}`,
+                      background: shapeCat === c ? 'var(--fg)' : 'transparent',
+                      color: shapeCat === c ? 'var(--bg)' : 'var(--fg-2)',
+                      fontSize: 'calc(10px * var(--scale))', cursor: 'pointer',
+                    }}>
+                    {c === 'alle' ? (lang === 'de' ? 'alle' : 'all') : c}
                   </button>
                 ))}
               </div>
 
-              <div style={{ marginTop: 32 }}>
-                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>farbe</label>
+              {/* search */}
+              <input
+                value={shapeSearch}
+                onChange={e => setShapeSearch(e.target.value)}
+                placeholder={lang === 'de' ? 'suchen … (z.b. herz, auto, stern)' : 'search … (e.g. heart, car, star)'}
+                style={{
+                  width: '100%', marginTop: 12, padding: '11px 14px',
+                  background: 'var(--bg-2)', border: '1px solid var(--line)',
+                  color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(13px * var(--scale))',
+                  textTransform: 'lowercase',
+                }} />
+
+              {/* shape grid */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))',
+                gap: 8, marginTop: 14, maxHeight: 420, overflowY: 'auto',
+                border: '1px solid var(--line)', padding: 8, background: 'var(--bg)',
+              }}>
+                {shapesFiltered.slice(0, 120).map(s => (
+                  <button key={s.id}
+                    onClick={() => setCfg({ ...cfg, shapeId: s.id, shapeName: s.name, shapeImg: s.img })}
+                    title={s.name}
+                    style={{
+                      padding: 6,
+                      border: `1px solid ${cfg.shapeId === s.id ? 'var(--fg)' : 'var(--line)'}`,
+                      background: cfg.shapeId === s.id ? 'var(--bg-2)' : 'transparent',
+                      color: 'inherit', cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    }}>
+                    <img src={s.img} loading="lazy" alt={s.name}
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', background: '#fff' }} />
+                    <span style={{
+                      fontSize: 'calc(9px * var(--scale))', lineHeight: 1.25, textAlign: 'center',
+                      overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    }}>{s.name}</span>
+                  </button>
+                ))}
+                {shapesFiltered.length === 0 && (
+                  <div style={{ gridColumn: '1/-1', padding: 20, color: 'var(--fg-3)', fontSize: 12, textAlign: 'center' }}>
+                    {lang === 'de' ? 'keine formen gefunden' : 'no shapes found'}
+                  </div>
+                )}
+              </div>
+              {cfg.shapeName && (
+                <div style={{ marginTop: 10, fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)' }}>
+                  ✓ {cfg.shapeName} <span style={{ color: 'var(--fg-3)' }}>({cfg.shapeId})</span>
+                </div>
+              )}
+
+              <div style={{ marginTop: 28 }}>
+                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                  {lang === 'de' ? 'farbe' : 'color'}
+                </label>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                   {colors.map(col => (
                     <button key={col.c}
@@ -1412,58 +1448,59 @@ const Configurator = () => {
                   ))}
                 </div>
               </div>
-
-              <div style={{ marginTop: 32 }}>
-                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>dichte · {cfg.density} stk sichtbar</label>
-                <input type="range" min={3} max={18} value={cfg.density}
-                  onChange={e => setCfg({ ...cfg, density: +e.target.value })}
-                  style={{ width: '100%', marginTop: 10, accentColor: 'var(--accent)' }}
-                />
-              </div>
             </div>
           )}
 
           {step === 2 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>geschmacksprofil</label>
-              <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
-                {FLAVORS.map(f => (
-                  <button key={f.id}
-                    onClick={() => setCfg({ ...cfg, flavor: f.id })}
-                    style={{
-                      textAlign: 'left',
-                      padding: '14px 16px',
-                      border: `1px solid ${cfg.flavor === f.id ? 'var(--fg)' : 'var(--line)'}`,
-                      background: cfg.flavor === f.id ? 'var(--bg-2)' : 'transparent',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                      display: 'grid',
-                      gridTemplateColumns: 'auto 1fr auto',
-                      alignItems: 'center',
-                      gap: 16,
-                    }}
-                  >
-                    <span style={{
-                      width: 14, height: 14,
-                      border: `1px solid ${cfg.flavor === f.id ? 'var(--fg)' : 'var(--fg-3)'}`,
-                      background: cfg.flavor === f.id ? 'var(--accent)' : 'transparent',
-                    }} />
-                    <span>
-                      <div style={{ fontSize: 'calc(15px * var(--scale))' }}>{f.label}</div>
-                      <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', marginTop: 4 }}>{f.notes}</div>
-                    </span>
-                    <span style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.1em' }}>
-                      {f.stock}
-                    </span>
-                  </button>
-                ))}
+              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                {lang === 'de' ? 'geschmack wählen' : 'pick a flavor'} {flavorsData.length ? `· ${flavorsData.length}` : ''}
+              </label>
+              <input
+                value={flavorSearch}
+                onChange={e => setFlavorSearch(e.target.value)}
+                placeholder={lang === 'de' ? 'suchen … (z.b. himbeere, cola, matcha)' : 'search … (e.g. raspberry, cola, matcha)'}
+                style={{
+                  width: '100%', marginTop: 14, padding: '11px 14px',
+                  background: 'var(--bg-2)', border: '1px solid var(--line)',
+                  color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(13px * var(--scale))',
+                  textTransform: 'lowercase',
+                }} />
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                gap: 6, marginTop: 14, maxHeight: 460, overflowY: 'auto',
+                border: '1px solid var(--line)', padding: 8,
+              }}>
+                {flavorsFiltered.map(f => {
+                  const label = lang === 'de' ? f.de : f.en;
+                  const sel = cfg.flavor === f.en;
+                  return (
+                    <button key={f.en}
+                      onClick={() => setCfg({ ...cfg, flavor: f.en, flavorDe: f.de })}
+                      style={{
+                        textAlign: 'left', padding: '11px 12px', minHeight: 42,
+                        border: `1px solid ${sel ? 'var(--fg)' : 'var(--line)'}`,
+                        background: sel ? 'var(--bg-2)' : 'transparent',
+                        color: 'inherit', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        fontSize: 'calc(12px * var(--scale))',
+                      }}>
+                      <span style={{
+                        width: 10, height: 10, flexShrink: 0,
+                        border: `1px solid ${sel ? 'var(--fg)' : 'var(--fg-3)'}`,
+                        background: sel ? 'var(--accent)' : 'transparent',
+                      }} />
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>verpackung</label>
+              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>{lang === 'de' ? 'verpackung' : 'packaging'}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 16 }}>
                 {PACKAGES.filter(p => p.bases.includes(cfg.base)).map(p => (
                   <button key={p.id}
@@ -1483,7 +1520,40 @@ const Configurator = () => {
                 ))}
               </div>
               <div style={{ marginTop: 32 }}>
-                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>füllmenge · {cfg.weight}g</label>
+                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>{lang === 'de' ? 'verpackungs-farbe' : 'packaging color'}</label>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {[
+                    { c: '#2f6b3f', l: 'forest' },
+                    { c: '#c85250', l: 'tomato' },
+                    { c: '#e0b53f', l: 'mustard' },
+                    { c: '#2b3a67', l: 'navy' },
+                    { c: '#16140f', l: 'ink' },
+                    { c: '#efe9dd', l: 'cream' },
+                    { c: '#b0472f', l: 'rust' },
+                    { c: '#6a4fb0', l: 'grape' },
+                  ].map(col => {
+                    const active = (cfg.packColor || '#2f6b3f') === col.c;
+                    return (
+                      <button key={col.c}
+                        onClick={() => setCfg({ ...cfg, packColor: col.c })}
+                        title={col.l}
+                        style={{
+                          width: 36, height: 36, background: col.c,
+                          border: active ? '2px solid var(--fg)' : '1px solid var(--line)',
+                          cursor: 'pointer',
+                        }} />
+                    );
+                  })}
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 4, cursor: 'pointer', fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)' }}>
+                    <input type="color" value={cfg.packColor || '#2f6b3f'}
+                      onChange={e => setCfg({ ...cfg, packColor: e.target.value })}
+                      style={{ width: 36, height: 36, padding: 0, border: '1px solid var(--line)', background: 'none', cursor: 'pointer' }} />
+                    {lang === 'de' ? 'eigene' : 'custom'}
+                  </label>
+                </div>
+              </div>
+              <div style={{ marginTop: 32 }}>
+                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>{lang === 'de' ? 'füllmenge' : 'fill weight'} · {cfg.weight}g</label>
                 <input type="range" min={40} max={300} step={10} value={cfg.weight}
                   onChange={e => setCfg({ ...cfg, weight: +e.target.value })}
                   style={{ width: '100%', marginTop: 10, accentColor: 'var(--accent)' }}
@@ -1497,7 +1567,7 @@ const Configurator = () => {
               <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>branding</label>
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>produkt-name</div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>{lang === 'de' ? 'produkt-name' : 'product name'}</div>
                   <input value={cfg.name}
                     onChange={e => setCfg({ ...cfg, name: e.target.value })}
                     style={{
@@ -1523,7 +1593,7 @@ const Configurator = () => {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>upload logo (optional)</div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'logo hochladen (optional)' : 'upload logo (optional)'}</div>
                   <label style={{
                     display: 'block', height: 100, cursor: 'pointer',
                     border: '1px solid var(--line)',
@@ -1535,10 +1605,10 @@ const Configurator = () => {
                         <img src={cfg.logo} style={{ position: 'absolute', inset: 8, width: 'calc(100% - 16px)', height: 'calc(100% - 16px)', objectFit: 'contain' }} />
                         <button onClick={(e) => { e.preventDefault(); setCfg({ ...cfg, logo: null }); }}
                           style={{ position: 'absolute', top: 6, right: 6, background: 'var(--bg)', border: '1px solid var(--line)', padding: '4px 8px', fontSize: 10 }}>
-                          entfernen
+                          {lang === 'de' ? 'entfernen' : 'remove'}
                         </button>
                       </>
-                    ) : <span>klicken zum hochladen · svg / png</span>}
+                    ) : <span>{lang === 'de' ? 'klicken zum hochladen · svg / png' : 'click to upload · svg / png'}</span>}
                     <input type="file" accept="image/*" style={{ display: 'none' }}
                       onChange={e => {
                         const f = e.target.files?.[0];
@@ -1550,7 +1620,7 @@ const Configurator = () => {
                   </label>
                 </div>
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>produkt-foto (optional)</div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'produkt-foto (optional)' : 'product photo (optional)'}</div>
                   <label style={{
                     display: 'block', height: 100, cursor: 'pointer',
                     border: '1px solid var(--line)',
@@ -1562,10 +1632,10 @@ const Configurator = () => {
                         <img src={cfg.photo} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                         <button onClick={(e) => { e.preventDefault(); setCfg({ ...cfg, photo: null }); }}
                           style={{ position: 'absolute', top: 6, right: 6, background: 'var(--bg)', border: '1px solid var(--line)', padding: '4px 8px', fontSize: 10 }}>
-                          entfernen
+                          {lang === 'de' ? 'entfernen' : 'remove'}
                         </button>
                       </>
-                    ) : <span>key visual · optional</span>}
+                    ) : <span>{lang === 'de' ? 'key visual · optional' : 'key visual · optional'}</span>}
                     <input type="file" accept="image/*" style={{ display: 'none' }}
                       onChange={e => {
                         const f = e.target.files?.[0];
@@ -1579,12 +1649,12 @@ const Configurator = () => {
                 <div style={{ padding: 16, border: '1px solid var(--line)', background: 'var(--bg-2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: 'var(--fg-3)' }}>
-                      ai-hintergrund
+                      {lang === 'de' ? 'ai-hintergrund' : 'ai background'}
                     </div>
                     {cfg.labelBgUrl && (
                       <button onClick={() => setCfg({ ...cfg, labelBgUrl: null })}
                         style={{ fontSize: 'calc(9px * var(--scale))', color: 'var(--fg-3)', border: '1px solid var(--line)', padding: '3px 8px', letterSpacing: '0.1em' }}>
-                        entfernen
+                        {lang === 'de' ? 'entfernen' : 'remove'}
                       </button>
                     )}
                   </div>
@@ -1592,7 +1662,7 @@ const Configurator = () => {
                     <textarea
                       value={genPrompt}
                       onChange={e => setGenPrompt(e.target.value)}
-                      placeholder="beschreibe das label-artwork … z.b. 'risograph-print von eingelegten gurken, erdige töne, körnige textur'"
+                      placeholder={lang === 'de' ? "beschreibe das label-artwork … z.b. 'risograph-print von eingelegten gurken, erdige töne, körnige textur'" : "describe the label artwork … e.g. 'risograph print of pickled cucumbers, earthy tones, grainy texture'"}
                       rows={3}
                       style={{
                         width: '100%', padding: '12px 14px',
@@ -1614,7 +1684,7 @@ const Configurator = () => {
                       cursor: genLoading ? 'default' : 'pointer',
                       minHeight: 40,
                     }}>
-                    ⚄ prompt würfeln
+                    ⚄ {lang === 'de' ? 'prompt würfeln' : 'randomize prompt'}
                   </button>
                   <button
                     onClick={generateBg}
@@ -1638,7 +1708,7 @@ const Configurator = () => {
                         animation: 'spin 0.7s linear infinite', display: 'inline-block',
                       }} />
                     )}
-                    {genLoading ? 'generiere…' : '✦ artwork generieren'}
+                    {genLoading ? (lang === 'de' ? 'generiere…' : 'generating…') : (lang === 'de' ? '✦ artwork generieren' : '✦ generate artwork')}
                   </button>
                   {genError && (
                     <div style={{ marginTop: 8, fontSize: 'calc(10px * var(--scale))', color: 'oklch(0.6 0.18 25)', letterSpacing: '0.04em' }}>
@@ -1647,13 +1717,13 @@ const Configurator = () => {
                   )}
                   {cfg.labelBgUrl && !genLoading && (
                     <div style={{ marginTop: 8, fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', letterSpacing: '0.08em' }}>
-                      ✓ artwork aktiv — wird live auf das label gemappt
+                      {lang === 'de' ? '✓ artwork aktiv. wird live auf das label gemappt' : '✓ artwork active. mapped live onto the label'}
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>typo-stil</div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'typo-stil' : 'type style'}</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {[
                       ['editorial', 'editorial'],
@@ -1676,7 +1746,7 @@ const Configurator = () => {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>schriftfarbe</div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'schriftfarbe' : 'type color'}</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {[
                       ['#16140f', 'ink'],
@@ -1706,9 +1776,9 @@ const Configurator = () => {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>overlay (zwischen artwork & schrift)</div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'overlay (zwischen artwork & schrift)' : 'overlay (between artwork & type)'}</div>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                    {[['none', 'kein'], ['light', 'hell'], ['dark', 'dunkel']].map(([val, lbl]) => (
+                    {(lang === 'de' ? [['none', 'kein'], ['light', 'hell'], ['dark', 'dunkel']] : [['none', 'none'], ['light', 'light'], ['dark', 'dark']]).map(([val, lbl]) => (
                       <button key={val}
                         onClick={() => setCfg({ ...cfg, overlayTone: val })}
                         style={{
@@ -1721,7 +1791,7 @@ const Configurator = () => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
-                      stärke {Math.round((cfg.overlayOpacity ?? 0.25) * 100)}%
+                      {lang === 'de' ? 'stärke' : 'strength'} {Math.round((cfg.overlayOpacity ?? 0.25) * 100)}%
                     </span>
                     <input type="range" min={0} max={0.7} step={0.05}
                       value={cfg.overlayOpacity ?? 0.25}
@@ -1736,49 +1806,78 @@ const Configurator = () => {
 
           {step === 5 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>launch-kalkulation</label>
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>charge · {cfg.units.toLocaleString()} einheiten</div>
-                <input type="range" min={1000} max={50000} step={1000} value={cfg.units}
-                  onChange={e => setCfg({ ...cfg, units: +e.target.value })}
-                  style={{ width: '100%', accentColor: 'var(--accent)' }} />
-              </div>
+              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                {lang === 'de' ? 'drop the idea. wir melden uns' : 'drop the idea. we get back to you'}
+              </label>
 
-              <div style={{ marginTop: 28, border: '1px solid var(--line)' }}>
+              {/* summary of the concept */}
+              <div style={{ marginTop: 16, border: '1px solid var(--line)' }}>
                 {[
-                  ['kostenpreis / stk',    '€1,00'],
-                  ['vk empfohlen / stk',   '€3,49'],
-                  ['gesamt-einkauf',       `€${totalCost.toLocaleString('de-DE')}`],
-                  ['brutto-umsatz',        `€${grossRev.toLocaleString('de-DE')}`],
-                  ['brutto-gewinn',        `€${grossProfit.toLocaleString('de-DE')}`],
-                  ['marge',                '71%'],
+                  [lang === 'de' ? 'konzept' : 'concept', cfg.name || '·'],
+                  [lang === 'de' ? 'kategorie' : 'category', cfg.base],
+                  [lang === 'de' ? 'form' : 'shape', cfg.shapeName || '·'],
+                  [lang === 'de' ? 'geschmack' : 'flavor', (lang === 'de' ? cfg.flavorDe : cfg.flavor) || '·'],
+                  [lang === 'de' ? 'verpackung' : 'packaging', cfg.pack],
+                  ['creator', '@' + (cfg.handle || '·')],
                 ].map(([k, v], i) => (
                   <div key={i} style={{
                     display: 'flex', justifyContent: 'space-between',
-                    padding: '12px 16px',
+                    padding: '11px 16px',
                     borderBottom: i < 5 ? '1px solid var(--line)' : 'none',
-                    background: i === 4 ? 'var(--bg-2)' : 'transparent',
                   }}>
-                    <span style={{ color: 'var(--fg-2)', fontSize: 'calc(12px * var(--scale))' }}>{k}</span>
-                    <span className="tabular" style={{ fontWeight: i === 4 ? 700 : 400, fontSize: 'calc(13px * var(--scale))' }}>{v}</span>
+                    <span style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.08em' }}>{k}</span>
+                    <span style={{ fontSize: 'calc(12px * var(--scale))', fontWeight: 600 }}>{v}</span>
                   </div>
                 ))}
+              </div>
+
+              {/* contact + message */}
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>
+                  {lang === 'de' ? 'deine e-mail' : 'your email'}
+                </div>
+                <input
+                  value={cfg.contactEmail || ''}
+                  onChange={e => setCfg({ ...cfg, contactEmail: e.target.value })}
+                  placeholder="you@example.com"
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    background: 'var(--bg-2)', border: '1px solid var(--line)',
+                    color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(14px * var(--scale))',
+                    textTransform: 'lowercase',
+                  }} />
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>
+                  {lang === 'de' ? 'erzähl uns von deiner idee (optional)' : 'tell us about your idea (optional)'}
+                </div>
+                <textarea
+                  value={cfg.ideaNote || ''}
+                  onChange={e => setCfg({ ...cfg, ideaNote: e.target.value })}
+                  rows={4}
+                  placeholder={lang === 'de' ? 'community, timing, vibe — alles was wir wissen sollten …' : 'community, timing, vibe — anything we should know …'}
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    background: 'var(--bg-2)', border: '1px solid var(--line)',
+                    color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(13px * var(--scale))',
+                    lineHeight: 1.55, resize: 'vertical', textTransform: 'lowercase',
+                  }} />
               </div>
 
               <button
                 onClick={() => setLaunched(true)}
                 style={{
                 width: '100%', padding: '18px',
-                marginTop: 24,
-                background: 'var(--accent)', color: 'var(--accent-ink)',
+                marginTop: 20, minHeight: 52,
+                background: 'var(--fg)', color: 'var(--bg)',
                 fontSize: 'calc(14px * var(--scale))',
-                fontWeight: 700, letterSpacing: '0.05em',
+                fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
                 border: 'none', cursor: 'pointer',
               }}>
-                → drop einreichen
+                → drop the idea
               </button>
               <div style={{ textAlign: 'center', marginTop: 12, color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em' }}>
-                review durch foofab innerhalb 24h
+                {lang === 'de' ? 'wir melden uns innerhalb von 48h' : 'we hit you back within 48h'}
               </div>
             </div>
           )}
@@ -1795,7 +1894,7 @@ const Configurator = () => {
                 display: 'flex', alignItems: 'center', gap: 10,
               }}
             >
-              <Arrow dir="left" /> zurück
+              <Arrow dir="left" /> {lang === 'de' ? 'zurück' : 'back'}
             </button>
             <button
               onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))}
@@ -1808,7 +1907,7 @@ const Configurator = () => {
                 display: 'flex', alignItems: 'center', gap: 10,
               }}
             >
-              weiter → {STEPS[Math.min(STEPS.length - 1, step + 1)].label}
+              {lang === 'de' ? 'weiter' : 'next'} → {STEPS[Math.min(STEPS.length - 1, step + 1)].label}
             </button>
           </div>
         </div>
