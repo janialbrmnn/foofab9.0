@@ -3234,6 +3234,7 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true, zoom 
       width: '100%',
       aspectRatio: frameless ? 'auto' : '1 / 1.15',
       height: frameless ? '100%' : undefined,
+      minHeight: frameless ? 280 : undefined,
       position: 'relative',
       background: `color-mix(in srgb, ${flavorHex} 58%, #ffffff)`,
       border: frameless ? 'none' : '1px solid var(--line)',

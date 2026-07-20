@@ -530,8 +530,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
   /* Launch overlay: stack hero on mobile, product on top */
   .launch-hero { grid-template-columns: 1fr !important; gap: 24px !important; overflow-y: auto !important; }
-  .launch-product { order: -1 !important; height: auto !important; }
-  .launch-product > div { max-width: 320px !important; margin: 0 auto; }
+  .launch-product { order: -1 !important; height: 46vh !important; min-height: 300px !important; }
+  .launch-product > div { max-width: none !important; margin: 0 !important; height: 100% !important; }
   .launch-stats { gap: 12px !important; }
   }
 
