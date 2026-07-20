@@ -1086,11 +1086,10 @@ const LaunchOverlay = ({ cfg, onClose }) => {
           </div>
         </div>
 
-        {/* right: hero product */}
-        <div className="launch-product" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
-          <div style={{ width: '100%', maxWidth: 520 }}>
-            <ThreeProductPreview cfg={cfg} tilt={tilt} onTiltChange={setTilt} />
-          </div>
+        {/* right: hero product — frameless, fills its half on the flavor
+            backdrop so the pack floats free */}
+        <div className="launch-product" style={{ height: '100%', minHeight: 0 }}>
+          <ThreeProductPreview cfg={cfg} tilt={tilt} onTiltChange={setTilt} frameless />
         </div>
       </div>
     </div>
@@ -1113,7 +1112,9 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
     func: 'none',
     funcNote: '',
     calFill: 'gummies',
-    handle: 'foodcreator.hh',
+    handle: '',
+    titleCase: 'upper',
+    titleScale: 1,
     weight: 120,
     density: 9,
     units: 5000,
@@ -1126,8 +1127,9 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
         const merged = { ...INITIAL_CFG, ...JSON.parse(saved) };
         // legacy base category migrated to chocolate bars
         if (merged.base === 'bars') merged.base = 'chocolate bars';
-        // legacy demo name → empty so the placeholder shows
+        // legacy demo name/handle → empty so placeholders show
         if (merged.name === 'sauer & käse') merged.name = '';
+        if (merged.handle === 'foodcreator.hh') merged.handle = '';
         return merged;
       }
     } catch (e) {}
@@ -1141,8 +1143,15 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
   const [shapeSearch, setShapeSearch] = React.useState('');
   const [flavorSearch, setFlavorSearch] = React.useState('');
   React.useEffect(() => {
-    fetch('assets/shapes.json').then(r => r.json()).then(setShapesData).catch(() => {});
-    fetch('assets/flavors.json').then(r => r.json()).then(setFlavorsData).catch(() => {});
+    // try a few base paths — the app runs from different roots depending
+    // on where it's hosted (site root, design preview, dist)
+    const fetchJson = (paths) => paths.reduce(
+      (p, u) => p.catch(() => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); })),
+      Promise.reject(new Error('start')));
+    fetchJson(['assets/shapes.json', './assets/shapes.json', '/assets/shapes.json', 'dist/assets/shapes.json'])
+      .then(setShapesData).catch(() => {});
+    fetchJson(['assets/flavors.json', './assets/flavors.json', '/assets/flavors.json', 'dist/assets/flavors.json'])
+      .then(setFlavorsData).catch(() => {});
   }, []);
   const shapesFiltered = React.useMemo(() => {
     const q = shapeSearch.trim().toLowerCase();
@@ -1194,8 +1203,8 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
     while (p === genPrompt) p = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)];
     setGenPrompt(p);
   };
-  const generateBg = async () => {
-    const prompt = genPrompt.trim();
+  const generateBg = async (promptOverride) => {
+    const prompt = (typeof promptOverride === 'string' ? promptOverride : genPrompt).trim();
     if (!prompt || genLoading) return;
     setGenLoading(true);
     setGenError(null);
@@ -1234,6 +1243,34 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
   // its own float + wiggle animation on top.
   const [tilt, setTilt] = React.useState({ x: -9, y: 17 });
 
+  // Auto AI visual: entering branding without artwork kicks off a
+  // generation with a prompt derived from flavor, shape and pack color.
+  const autoVisualTried = React.useRef(false);
+  React.useEffect(() => {
+    if (step !== 4) return;
+    if (cfg.labelBgUrl || genLoading || autoVisualTried.current) return;
+    autoVisualTried.current = true;
+    const COLOR_NAMES = {
+      '#2f6b3f': 'forest green', '#c85250': 'tomato red', '#e0b53f': 'mustard yellow',
+      '#2b3a67': 'navy blue', '#16140f': 'black', '#efe9dd': 'cream',
+      '#b0472f': 'rust orange', '#6a4fb0': 'purple',
+    };
+    const colorName = COLOR_NAMES[(cfg.packColor || '').toLowerCase()] || 'soft pastel';
+    const p = `pixar style depiction of ${(cfg.flavor || 'fruit')}, next to miniature ${(cfg.shapeName || 'gummy bear').toLowerCase()} gummies, in front of a clean ${colorName} background, playful product hero shot, no text`;
+    setGenPrompt(p);
+    generateBg(p);
+  }, [step]);
+
+  // Zoom framings: 'out' full view, 'in' close-up on the pack, 'piece'
+  // centers one floating gummy. Auto per step: shape → piece, branding
+  // → in, everything else → out. The floating button toggles between
+  // the step's close-up and the full view.
+  const stepAutoZoom = (s) => (s === 1 ? 'piece' : (s === 4 ? 'in' : 'out'));
+  const [zoom, setZoom] = React.useState('out');
+  React.useEffect(() => {
+    setZoom(stepAutoZoom(step));
+  }, [step]);
+
   // Shape step availability: nuts and chocolate bars ship in fixed
   // shapes, so the step is grayed out. The advent calendar picks its
   // fill (gummies/chocolate) inside the shape step instead.
@@ -1267,13 +1304,13 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
   return (
     <div className="page-pad config-page" style={{ padding: '80px 32px 48px', maxWidth: 1440, margin: '0 auto' }}>
       {/* header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', paddingBottom: 20, borderBottom: '1px solid var(--line)', marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', paddingBottom: 14, borderBottom: '1px solid var(--line)', marginBottom: 14 }}>
         <div>
-          <div style={{ marginBottom: 12 }}>
+          <div className="config-back-header" style={{ marginBottom: 12 }}>
             <BackKicker lang={lang} onClick={onBack} />
           </div>
           <h2 style={{ fontSize: 'calc(28px * var(--scale))', fontWeight: 400, letterSpacing: '-0.02em' }}>
-            {lang === 'de' ? <>von der community zum produkt. in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>tagen statt monaten</span>.</> : <>from community to product. in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>days, not months</span>.</>}
+            create the best product <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>ever.</span>
           </h2>
         </div>
       </div>
@@ -1339,7 +1376,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                       transition: 'all 140ms',
                     }}
                   >
-                    <div style={{ fontSize: 'calc(19px * var(--scale))', fontWeight: 700, marginBottom: 6, letterSpacing: '-0.01em' }}>{b}</div>
+                    <div style={{ fontSize: 'calc(19px * var(--scale))', fontWeight: 700, marginBottom: 6, letterSpacing: '-0.01em' }}>{b === 'advent calendar' ? 'calendar' : b}</div>
                     <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))' }}>
                       {b === 'gummies' && 'black forest · moq 1'}
                       {b === 'chocolate bars' && (lang === 'de' ? 'vielfältige formen & profile' : 'diverse shapes & profiles')}
@@ -1410,21 +1447,33 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                 {lang === 'de' ? 'form wählen' : 'pick a shape'} {shapesData.length ? `· ${shapesFiltered.length}/${shapesData.length}` : ''}
               </label>
 
-              {/* category filter */}
+              {/* category filter — values stay german (catalog data),
+                  display translates in the english UI */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
-                {['alle', 'Tiere', 'Essen/Trinken', 'Formen/Zeichen', 'Fahrzeuge', 'Hobby/Beruf', 'Mensch', 'Feiertage', 'Sonstiges'].map(c => (
-                  <button key={c}
-                    onClick={() => setShapeCat(c)}
-                    style={{
-                      padding: '7px 12px', minHeight: 34,
-                      border: `1px solid ${shapeCat === c ? 'var(--fg)' : 'var(--line)'}`,
-                      background: shapeCat === c ? 'var(--fg)' : 'transparent',
-                      color: shapeCat === c ? 'var(--bg)' : 'var(--fg-2)',
-                      fontSize: 'calc(10px * var(--scale))', cursor: 'pointer',
-                    }}>
-                    {c === 'alle' ? (lang === 'de' ? 'alle' : 'all') : c}
-                  </button>
-                ))}
+                {['alle', 'Tiere', 'Essen/Trinken', 'Formen/Zeichen', 'Fahrzeuge', 'Hobby/Beruf', 'Mensch', 'Feiertage', 'Sonstiges'].map(c => {
+                  const CAT_EN = {
+                    'Tiere': 'animals', 'Essen/Trinken': 'food & drinks',
+                    'Formen/Zeichen': 'shapes & symbols', 'Fahrzeuge': 'vehicles',
+                    'Hobby/Beruf': 'hobby & work', 'Mensch': 'people',
+                    'Feiertage': 'holidays', 'Sonstiges': 'other',
+                  };
+                  const label = c === 'alle'
+                    ? (lang === 'de' ? 'alle' : 'all')
+                    : (lang === 'de' ? c : (CAT_EN[c] || c));
+                  return (
+                    <button key={c}
+                      onClick={() => setShapeCat(c)}
+                      style={{
+                        padding: '7px 12px', minHeight: 34,
+                        border: `1px solid ${shapeCat === c ? 'var(--fg)' : 'var(--line)'}`,
+                        background: shapeCat === c ? 'var(--fg)' : 'transparent',
+                        color: shapeCat === c ? 'var(--bg)' : 'var(--fg-2)',
+                        fontSize: 'calc(10px * var(--scale))', cursor: 'pointer',
+                      }}>
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* search */}
@@ -1466,7 +1515,9 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                 ))}
                 {shapesFiltered.length === 0 && (
                   <div style={{ gridColumn: '1/-1', padding: 20, color: 'var(--fg-3)', fontSize: 12, textAlign: 'center' }}>
-                    {lang === 'de' ? 'keine formen gefunden' : 'no shapes found'}
+                    {shapesData.length === 0
+                      ? (lang === 'de' ? 'formen werden geladen …' : 'loading shapes …')
+                      : (lang === 'de' ? 'keine formen gefunden' : 'no shapes found')}
                   </div>
                 )}
               </div>
@@ -1555,7 +1606,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                   const sel = (cfg.func || 'none') === f.id;
                   return (
                     <button key={f.id}
-                      onClick={() => setCfg({ ...cfg, func: f.id })}
+                      onClick={() => setCfg({ ...cfg, func: f.id, funcLabel: f.en, funcActives: f.actives })}
                       style={{
                         textAlign: 'left',
                         padding: '16px 18px',
@@ -1602,7 +1653,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
           {step === 4 && (
             <div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
+                <div style={{ order: 1 }}>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>{lang === 'de' ? 'produkt-name' : 'product name'}</div>
                   <input value={cfg.name}
                     onChange={e => setCfg({ ...cfg, name: e.target.value })}
@@ -1616,7 +1667,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                 </div>
 
                 {/* packaging color + fill — the pack type follows the base */}
-                <div>
+                <div style={{ order: 2 }}>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'verpackungs-farbe' : 'packaging color'}</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     {[
@@ -1657,22 +1708,19 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                       style={{ width: '100%', marginTop: 8, accentColor: 'var(--accent)' }} />
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>creator handle</div>
-                  <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
-                    <span style={{ padding: '12px 0 12px 14px', color: 'var(--fg-3)' }}>@</span>
-                    <input value={cfg.handle}
-                      onChange={e => setCfg({ ...cfg, handle: e.target.value })}
-                      style={{
-                        flex: 1, padding: '12px 14px',
-                        background: 'transparent', border: 'none',
-                        color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(15px * var(--scale))',
-                        outline: 'none',
-                        textTransform: 'lowercase',
-                      }} />
-                  </div>
+                <div style={{ order: 8 }}>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>{lang === 'de' ? 'dein name (optional)' : 'your name (optional)'}</div>
+                  <input value={cfg.handle}
+                    onChange={e => setCfg({ ...cfg, handle: e.target.value })}
+                    placeholder={lang === 'de' ? 'steht klein auf der verpackung' : 'printed small on the pack'}
+                    style={{
+                      width: '100%', padding: '12px 14px',
+                      background: 'var(--bg-2)', border: '1px solid var(--line)',
+                      color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(15px * var(--scale))',
+                      textTransform: 'lowercase',
+                    }} />
                 </div>
-                <div>
+                <div style={{ order: 9 }}>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'logo hochladen (optional)' : 'upload logo (optional)'}</div>
                   <label style={{
                     display: 'block', height: 100, cursor: 'pointer',
@@ -1688,19 +1736,20 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                           {lang === 'de' ? 'entfernen' : 'remove'}
                         </button>
                       </>
-                    ) : <span>{lang === 'de' ? 'klicken zum hochladen · svg / png' : 'click to upload · svg / png'}</span>}
-                    <input type="file" accept="image/*" style={{ display: 'none' }}
+                    ) : <span>{lang === 'de' ? 'klicken zum hochladen · nur png / svg (transparenter hintergrund)' : 'click to upload · png / svg only (transparent background)'}</span>}
+                    <input type="file" accept="image/png,image/svg+xml" style={{ display: 'none' }}
                       onChange={e => {
                         const f = e.target.files?.[0];
                         if (!f) return;
+                        if (!/png|svg/i.test(f.type)) return;
                         const reader = new FileReader();
                         reader.onload = (ev) => setCfg({ ...cfg, logo: ev.target.result });
                         reader.readAsDataURL(f);
                       }} />
                   </label>
                 </div>
-                <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'produkt-foto (optional)' : 'product photo (optional)'}</div>
+                <div style={{ order: 10 }}>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'produkt-foto (optional) — wird auf die front gedruckt' : 'product photo (optional) — printed on the front'}</div>
                   <label style={{
                     display: 'block', height: 100, cursor: 'pointer',
                     border: '1px solid var(--line)',
@@ -1726,10 +1775,17 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                       }} />
                   </label>
                 </div>
-                <div style={{ padding: 16, border: '1px solid var(--line)', background: 'var(--bg-2)' }}>
+                <div style={{
+                  order: 3,
+                  padding: 2,
+                  background: 'conic-gradient(from 140deg, #ff5f6d, #ffc371, #f9f871, #7ae582, #63c8ff, #b96bff, #ff5f6d)',
+                }}>
+                <div style={{ padding: 16, background: 'var(--bg)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: 'var(--fg-3)' }}>
-                      {lang === 'de' ? 'ai-hintergrund' : 'ai background'}
+                    <div style={{ fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.14em', color: 'var(--fg)', fontWeight: 700 }}>
+                      ✦ {genLoading
+                        ? (lang === 'de' ? 'already creating your ai visual …' : 'already creating your ai visual …')
+                        : 'ai visual'}
                     </div>
                     {cfg.labelBgUrl && (
                       <button onClick={() => setCfg({ ...cfg, labelBgUrl: null })}
@@ -1797,22 +1853,27 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                   )}
                   {cfg.labelBgUrl && !genLoading && (
                     <div style={{ marginTop: 8, fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', letterSpacing: '0.08em' }}>
-                      {lang === 'de' ? '✓ artwork aktiv. wird live auf das label gemappt' : '✓ artwork active. mapped live onto the label'}
+                      {lang === 'de' ? '✓ artwork aktiv. wird auf die front gedruckt' : '✓ artwork active. printed across the front'}
                     </div>
                   )}
                 </div>
+                </div>
 
-                <div>
+                <div style={{ order: 4 }}>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'typo-stil' : 'type style'}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))', gap: 8 }}>
                     {[
-                      ['editorial', 'editorial', 'italic 15px Georgia, serif'],
+                      ['editorial', 'editorial', 'italic 15px "Kreol Standard", Georgia, serif'],
                       ['serif', 'serif', '600 14px Georgia, serif'],
-                      ['mono', 'mono bold', '700 13px monospace'],
-                      ['clean', 'mono clean', '400 13px monospace'],
-                      ['display', 'display', '900 13px "Arial Black", sans-serif'],
-                      ['condensed', 'condensed', '700 14px "Arial Narrow", sans-serif'],
-                      ['script', 'script', 'italic 700 16px "Snell Roundhand", cursive'],
+                      ['mono', 'mono bold', '700 13px "Neue Rational Mono", monospace'],
+                      ['clean', 'mono clean', '400 13px "Neue Rational Mono", monospace'],
+                      ['razor', 'razor', '800 14px "PP Kyoto", sans-serif'],
+                      ['botanic', 'botanic', '500 15px "PP Pangaia", serif'],
+                      ['gallery', 'gallery', '600 15px "PP Museum", serif'],
+                      ['velvet', 'velvet', '900 14px "Aretha", serif'],
+                      ['fruity', 'fruity', '400 17px "Fruitos", cursive'],
+                      ['bubble', 'bubble', '400 14px "BubbleLock", sans-serif'],
+                      ['puffy', 'puffy', '400 14px "Rogly", sans-serif'],
                     ].map(([val, lbl, previewFont]) => (
                       <button key={val}
                         onClick={() => setCfg({ ...cfg, typoStyle: val })}
@@ -1823,14 +1884,64 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                           color: 'inherit', cursor: 'pointer',
                           minHeight: 56, textAlign: 'left',
                         }}>
-                        <div style={{ font: previewFont, lineHeight: 1.1 }}>Aa</div>
+                        <div style={{ font: previewFont, lineHeight: 1.1, textTransform: 'none' }}>Aa</div>
                         <div style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', marginTop: 4 }}>{lbl}</div>
                       </button>
                     ))}
                   </div>
+
+                  {/* lettercase + fixed size steps */}
+                  <div className="m-stack-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', letterSpacing: '0.1em', marginBottom: 6 }}>
+                        {lang === 'de' ? 'schreibweise' : 'lettercase'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {[
+                          ['upper', 'AA'],
+                          ['typed', 'Aa'],
+                          ['lower', 'aa'],
+                        ].map(([val, lbl]) => (
+                          <button key={val}
+                            onClick={() => setCfg({ ...cfg, titleCase: val })}
+                            style={{
+                              flex: 1, padding: '10px 6px', minHeight: 42,
+                              border: `1px solid ${(cfg.titleCase || 'upper') === val ? 'var(--fg)' : 'var(--line)'}`,
+                              background: (cfg.titleCase || 'upper') === val ? 'var(--bg-2)' : 'transparent',
+                              color: 'inherit', cursor: 'pointer',
+                              fontSize: 'calc(13px * var(--scale))', fontWeight: 700,
+                              textTransform: 'none',
+                            }}>{lbl}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', letterSpacing: '0.1em', marginBottom: 6 }}>
+                        {lang === 'de' ? 'schriftgröße' : 'type size'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {[
+                          [0.85, 's'],
+                          [1, 'm'],
+                          [1.15, 'l'],
+                          [1.3, 'xl'],
+                        ].map(([val, lbl]) => (
+                          <button key={lbl}
+                            onClick={() => setCfg({ ...cfg, titleScale: val })}
+                            style={{
+                              flex: 1, padding: '10px 4px', minHeight: 42,
+                              border: `1px solid ${(cfg.titleScale || 1) === val ? 'var(--fg)' : 'var(--line)'}`,
+                              background: (cfg.titleScale || 1) === val ? 'var(--bg-2)' : 'transparent',
+                              color: 'inherit', cursor: 'pointer',
+                              fontSize: 'calc(12px * var(--scale))', fontWeight: 700,
+                            }}>{lbl}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
+                <div style={{ order: 6 }}>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'schriftfarbe' : 'type color'}</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {[
@@ -1860,7 +1971,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                   </div>
                 </div>
 
-                <div>
+                <div style={{ order: 7 }}>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'overlay (zwischen artwork & schrift)' : 'overlay (between artwork & type)'}</div>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                     {(lang === 'de' ? [['none', 'kein'], ['light', 'hell'], ['dark', 'dunkel']] : [['none', 'none'], ['light', 'light'], ['dark', 'dark']]).map(([val, lbl]) => (
@@ -1909,12 +2020,12 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                         : '');
                   const rows = [
                     [lang === 'de' ? 'konzept' : 'concept', cfg.name || '·'],
-                    [lang === 'de' ? 'kategorie' : 'category', cfg.base],
+                    [lang === 'de' ? 'kategorie' : 'category', cfg.base === 'advent calendar' ? 'calendar' : cfg.base],
                     [lang === 'de' ? 'form' : 'shape', shapeVal],
                     [lang === 'de' ? 'geschmack' : 'flavor', (lang === 'de' ? cfg.flavorDe : cfg.flavor) || '·'],
                     [lang === 'de' ? 'funktion' : 'function', fnLabel],
                     [lang === 'de' ? 'verpackung' : 'packaging', cfg.pack],
-                    ['creator', '@' + (cfg.handle || '·')],
+                    ['creator', cfg.handle || '·'],
                   ];
                   return rows.map(([k, v], i) => (
                     <div key={i} style={{
@@ -2016,7 +2127,36 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
           <div className="m-preview-sticky" style={{
             position: 'sticky', top: 80,
           }}>
-            <ThreeProductPreview cfg={cfg} tilt={tilt} onTiltChange={setTilt} showPieces={step >= 1} />
+            <ThreeProductPreview cfg={cfg} tilt={tilt} onTiltChange={setTilt} showPieces={step >= 1} zoom={zoom} />
+            {/* mobile: small back button floating on the preview */}
+            <div className="pv-back-overlay">
+              <BackKicker lang={lang} onClick={onBack} />
+            </div>
+            {/* reset the whole design and jump back to the start */}
+            <button className="pv-reset"
+              title={lang === 'de' ? 'design zurücksetzen' : 'delete design'}
+              onClick={() => { resetCfg(); setStep(0); setGenPrompt(''); setGenError(null); }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 3.4-7" />
+                <path d="M3 4v5h5" />
+              </svg>
+            </button>
+            {/* zoom toggle: full view ↔ the step's close-up */}
+            <button className="pv-zoom"
+              title={zoom !== 'out' ? 'zoom out' : 'zoom in'}
+              onClick={() => setZoom(z => {
+                if (z !== 'out') return 'out';
+                const auto = stepAutoZoom(step);
+                return auto === 'out' ? 'in' : auto;
+              })}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4.35-4.35" />
+                {zoom !== 'out'
+                  ? <path d="M8 11h6" />
+                  : <path d="M8 11h6M11 8v6" />}
+              </svg>
+            </button>
           </div>
         </div>
       </div>

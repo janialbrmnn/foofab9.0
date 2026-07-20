@@ -51,7 +51,9 @@ const GUMMY_KIND_RULES = [
   [/haus\b|house|turm|dom\b|kirche|münster|michel|tor\b|schloss|schloß|eiffel|wolkenkratzer|porta|frauenkirche/, 'house'],
   [/diamant|raute|diamond|kristall/, 'gem'],
   [/fussball|fußball|football|ball\b|kugel/, 'ball'],
-  [/smiley|münze|munze|coin|euro|pastille|kreis|circle|puck|elektrode|1€|goldbarren/, 'disc'],
+  [/euro|€/, 'euro'],
+  [/paragraf|paragraph|§/, 'paragraph'],
+  [/smiley|münze|munze|coin|pastille|kreis|circle|puck|elektrode|goldbarren/, 'disc'],
   [/baustein|cube|würfel|block|buch\b|book|handy|fernbedienung/, 'cube'],
   [/ring|donut|reifen|rad\b|hufeisen/, 'ring'],
   [/teddy|bär|baer|bear|gummibär|maus|mouse|katze|cat\b|kuh\b|wolf|hund|dog\b|tier|zoo|bauernhof|gürteltier|eichhörn|löwe|drache|bulle/, 'bear'],
@@ -794,6 +796,35 @@ const makeGummyShape = (kind) => {
     return sh;
   }
 
+  if (kind === 'euro') {
+    // € — open C ring with two horizontal bars through the left side
+    const parts = [];
+    const c = new THREE.Shape();
+    const a0 = Math.PI * 0.42, a1 = Math.PI * 1.58;
+    c.absarc(0.12, 0, 1.0, a0, a1, false);
+    c.absarc(0.12, 0, 0.62, a1, a0, true);
+    c.closePath();
+    parts.push(c);
+    parts.push(rectShape(-0.28, 0.2, 1.15, 0.21));
+    parts.push(rectShape(-0.28, -0.2, 1.15, 0.21));
+    return parts;
+  }
+
+  if (kind === 'paragraph') {
+    // § — two interlocking open hooks, stacked with an offset
+    const hook = (cy, aStart, aEnd) => {
+      const s = new THREE.Shape();
+      s.absarc(0, cy, 0.58, aStart, aEnd, false);
+      s.absarc(0, cy, 0.3, aEnd, aStart, true);
+      s.closePath();
+      return s;
+    };
+    return [
+      hook(0.42, Math.PI * -0.65, Math.PI * 0.9),
+      hook(-0.42, Math.PI * 0.35, Math.PI * 1.9),
+    ];
+  }
+
   if (kind === 'phone') {
     // Classic telephone handset: banana-shaped handle bar with a round
     // earpiece and mouthpiece bulging at each end.
@@ -1047,15 +1078,37 @@ const makeGummyMaterial = (col, opts = {}) => {
 // System stacks keep this working without extra font loads.
 const titleFontFor = (typoStyle, size) => {
   const fonts = {
+    // standards
     editorial: `italic ${size}px "Kreol Standard", "Georgia", serif`,
     serif:     `600 ${size}px "Georgia", "Times New Roman", serif`,
     mono:      `700 ${Math.round(size * 0.92)}px "Neue Rational Mono", monospace`,
     clean:     `400 ${Math.round(size * 0.92)}px "Neue Rational Mono", monospace`,
+    // character faces (named for their vibe, not their family)
+    razor:     `800 ${Math.round(size * 0.95)}px "PP Kyoto", "Arial Black", sans-serif`,
+    botanic:   `500 ${size}px "PP Pangaia", "Georgia", serif`,
+    gallery:   `600 ${size}px "PP Museum", "Georgia", serif`,
+    velvet:    `900 ${Math.round(size * 0.95)}px "Aretha", "Georgia", serif`,
+    fruity:    `400 ${Math.round(size * 1.05)}px "Fruitos", "Snell Roundhand", cursive`,
+    bubble:    `400 ${size}px "BubbleLock", "Arial Black", sans-serif`,
+    puffy:     `400 ${size}px "Rogly", "Arial Black", sans-serif`,
+    // legacy ids from older saved configs
     display:   `900 ${Math.round(size * 0.95)}px "Arial Black", "Impact", sans-serif`,
     condensed: `700 ${Math.round(size * 0.98)}px "Arial Narrow", "Helvetica Neue", sans-serif`,
     script:    `italic 700 ${size}px "Snell Roundhand", "Brush Script MT", cursive`,
   };
   return fonts[typoStyle] || fonts.editorial;
+};
+
+// Title casing + size controls from the branding step
+const titleTextFor = (cfg, name) => {
+  const mode = (cfg && cfg.titleCase) || 'upper';
+  if (mode === 'lower') return name.toLowerCase();
+  if (mode === 'typed') return name;
+  return name.toUpperCase();
+};
+const titleScaleFor = (cfg) => {
+  const s = cfg && cfg.titleScale;
+  return (typeof s === 'number' && s > 0) ? s : 1;
 };
 
 // ───────────────────────────────────────────────────────────────────
@@ -1076,8 +1129,8 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
   const ctx = canvas.getContext('2d');
 
   const accent = cfg?.color || '#c85250';
-  const name = (cfg?.name || 'your product name here').toLowerCase();
-  const handle = '@' + (cfg?.handle || 'foodcreator');
+  const name = titleTextFor(cfg, cfg?.name || 'your product name here');
+  const handle = ((cfg && cfg.handle) || '').trim();
   // When an AI background is in play, this canvas is the TYPO LAYER ONLY:
   // transparent base + a soft legibility scrim so text stays readable on
   // any image. Otherwise it's the full opaque paper label.
@@ -1127,37 +1180,47 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
   ctx.strokeRect(pad * 0.55, pad * 0.55, w - pad * 1.1, h - pad * 1.1);
   ctx.globalAlpha = 1;
 
-  // Brand — uploaded logo (re-inked) or the FOOFAB wordmark, centered
+  // Layout variants: nuts jar puts the logo top-LEFT with a more
+  // centered title; the hard-candy tin drops the on-label brand entirely
+  // (the logo prints on the lid instead) and runs the name bigger.
+  const isNuts = (cfg && cfg.base) === 'nuts';
+  const isTin = pack === 'tin';
+
+  // Brand — uploaded logo (re-inked) or the FOODCIETY wordmark
   const logoImg = cfg && cfg._logoImage;
   const brandCY = Math.round(h * 0.13);
-  if (logoImg && logoImg.width) {
-    const maxLH = h * 0.085, maxLW = w * 0.42;
-    const ar = logoImg.width / logoImg.height;
-    let lh = maxLH, lw = lh * ar;
-    if (lw > maxLW) { lw = maxLW; lh = lw / ar; }
-    const off = document.createElement('canvas');
-    off.width = Math.max(2, Math.round(lw * 2));
-    off.height = Math.max(2, Math.round(lh * 2));
-    const octx = off.getContext('2d');
-    octx.drawImage(logoImg, 0, 0, off.width, off.height);
-    octx.globalCompositeOperation = 'source-in';
-    octx.fillStyle = ink;
-    octx.fillRect(0, 0, off.width, off.height);
-    ctx.drawImage(off, cx - lw / 2, brandCY - lh / 2, lw, lh);
-  } else {
-    ctx.fillStyle = ink;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `500 ${Math.round(base * 0.055)}px "Neue Rational Mono", monospace`;
-    try { ctx.letterSpacing = `${Math.round(base * 0.02)}px`; } catch (e) {}
-    ctx.fillText('F O O F A B', cx, brandCY);
-    try { ctx.letterSpacing = '0px'; } catch (e) {}
+  if (!isTin) {
+    if (logoImg && logoImg.width) {
+      const maxLH = h * 0.085, maxLW = w * 0.42;
+      const ar = logoImg.width / logoImg.height;
+      let lh = maxLH, lw = lh * ar;
+      if (lw > maxLW) { lw = maxLW; lh = lw / ar; }
+      const off = document.createElement('canvas');
+      off.width = Math.max(2, Math.round(lw * 2));
+      off.height = Math.max(2, Math.round(lh * 2));
+      const octx = off.getContext('2d');
+      octx.drawImage(logoImg, 0, 0, off.width, off.height);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = ink;
+      octx.fillRect(0, 0, off.width, off.height);
+      const lx = isNuts ? pad * 1.3 : cx - lw / 2;
+      ctx.drawImage(off, lx, brandCY - lh / 2, lw, lh);
+    } else {
+      ctx.fillStyle = ink;
+      ctx.textAlign = isNuts ? 'left' : 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `500 ${Math.round(base * 0.05)}px "Neue Rational Mono", monospace`;
+      try { ctx.letterSpacing = `${Math.round(base * 0.016)}px`; } catch (e) {}
+      ctx.fillText('F O O D C I E T Y', isNuts ? pad * 1.3 : cx, brandCY);
+      try { ctx.letterSpacing = '0px'; } catch (e) {}
+      ctx.textAlign = 'left';
+    }
   }
 
   // Product name — the single expressive moment, centered
   ctx.fillStyle = ink;
   ctx.textAlign = 'center';
-  const titleSize = Math.round(base * 0.205);
+  const titleSize = Math.round(base * (isTin ? 0.27 : 0.205) * titleScaleFor(cfg));
   ctx.font = titleFontFor(typoStyle, titleSize);
   const maxW = w - pad * 2.6;
   const words = name.split(' ');
@@ -1173,9 +1236,9 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
     }
   }
   if (cur) lines.push(cur);
-  const lineH = titleSize * 1.08;
+  const lineH = titleSize * 0.98;
   const blockH = lines.length * lineH;
-  const areaCenter = h * 0.44;
+  const areaCenter = h * (isTin ? 0.42 : (isNuts ? 0.48 : 0.44));
   ctx.textBaseline = 'middle';
   ctx.save();
   if (transparent) {
@@ -1203,6 +1266,7 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
 
   // Flavor — small tracked caption, centered
   ctx.fillStyle = ink;
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = `500 ${Math.round(base * 0.05)}px "Neue Rational Mono", monospace`;
   try { ctx.letterSpacing = `${Math.round(base * 0.012)}px`; } catch (e) {}
@@ -1211,19 +1275,31 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
   ctx.globalAlpha = 1;
   try { ctx.letterSpacing = '0px'; } catch (e) {}
 
+  // Functional benefit — prints when one is picked
+  if (cfg && cfg.func && cfg.func !== 'none' && cfg.funcLabel) {
+    ctx.globalAlpha = 0.7;
+    ctx.font = `400 ${Math.round(base * 0.042)}px "Neue Rational Mono", monospace`;
+    const fnTxt = (cfg.funcLabel + (cfg.funcActives ? ' · ' + cfg.funcActives : '')).toLowerCase();
+    ctx.fillText(fnTxt, cx, ruleY + h * 0.1);
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = 'left';
+
   // One quiet accent moment — a small centered square in the candy color
   ctx.fillStyle = accent;
   const dotS = Math.max(4, Math.round(base * 0.022));
   ctx.fillRect(cx - dotS / 2, Math.round(h * 0.795) - dotS / 2, dotS, dotS);
 
-  // Bottom row — handle left, weight right, tiny captions above the frame
+  // Bottom row — creator name left (optional), weight right
   ctx.fillStyle = ink;
   ctx.textBaseline = 'middle';
   ctx.font = `400 ${Math.round(base * 0.045)}px "Neue Rational Mono", monospace`;
   const rowY = h - pad * 0.55 - Math.round(h * 0.055);
   ctx.globalAlpha = 0.85;
-  ctx.textAlign = 'left';
-  ctx.fillText(handle, pad * 1.4, rowY);
+  if (handle) {
+    ctx.textAlign = 'left';
+    ctx.fillText(handle, pad * 1.4, rowY);
+  }
   ctx.textAlign = 'right';
   ctx.fillText(`${cfg?.weight || 120} G`, w - pad * 1.4, rowY);
   ctx.globalAlpha = 1;
@@ -1262,51 +1338,74 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
   const lightFilm = relLuminance(packColor) > 0.55;
   const ink = cfg?.typoColor || (lightFilm ? '#16140f' : '#fffef2');
   const name = (cfg?.name || 'your product name here');
-  const handle = '@' + (cfg?.handle || 'foodcreator');
+  const handle = ((cfg && cfg.handle) || '').trim();
   const pad = Math.round(w * 0.075);
 
-  if (transparent) {
-    // Decal mode: optional artwork sits in a printed panel mid-pouch;
-    // the user overlay applies inside that panel only.
-    if (cfg && cfg._bgImage) {
-      const px = pad, pw2 = w - pad * 2;
-      const py = Math.round(h * 0.32), ph2 = Math.round(h * 0.36);
-      const img = cfg._bgImage;
-      const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
-      const ar = iw / ih, tar = pw2 / ph2;
-      let dw = pw2, dh = ph2, dx = px, dy = py;
-      if (ar > tar) { dw = ph2 * ar; dx = px + (pw2 - dw) / 2; } else { dh = pw2 / ar; dy = py + (ph2 - dh) / 2; }
-      ctx.save();
-      ctx.beginPath(); ctx.rect(px, py, pw2, ph2); ctx.clip();
-      ctx.drawImage(img, dx, dy, dw, dh);
-      const ovTone = (cfg && cfg.overlayTone) || 'none';
-      const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
-      if (ovTone !== 'none' && ovOp > 0) {
-        ctx.fillStyle = ovTone === 'dark' ? `rgba(22,20,15,${ovOp})` : `rgba(255,254,242,${ovOp})`;
-        ctx.fillRect(px, py, pw2, ph2);
-      }
-      ctx.restore();
-    }
-  } else if (cfg && cfg._bgImage) {
-    const img = cfg._bgImage;
+  // Draw the artwork full-bleed and melt its edges into the pack color —
+  // shared by decal mode (alpha fade → tinted pouch shows through) and
+  // printed film (opaque pack-color gradient).
+  const drawCover = (img) => {
     const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     const ar = iw / ih, tar = w / h;
     let dw = w, dh = h, dx = 0, dy = 0;
     if (ar > tar) { dw = h * ar; dx = (w - dw) / 2; } else { dh = w / ar; dy = (h - dh) / 2; }
     ctx.drawImage(img, dx, dy, dw, dh);
-    // pack-color wash so the artwork reads as printed on the brand film
+  };
+  const applyOverlayFull = () => {
+    const ovTone = (cfg && cfg.overlayTone) || 'none';
+    const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
+    if (ovTone !== 'none' && ovOp > 0) {
+      ctx.fillStyle = ovTone === 'dark' ? `rgba(22,20,15,${ovOp})` : `rgba(255,254,242,${ovOp})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+  };
+  // Edge melt: fade each side over ~16% of the surface
+  const fadeEdges = (mode) => {
+    const fx = Math.round(w * 0.16), fy = Math.round(h * 0.14);
+    const edges = [
+      [0, 0, fx, h, 'x', 0, fx],           // left
+      [w - fx, 0, fx, h, 'x', w, w - fx],  // right
+      [0, 0, w, fy, 'y', 0, fy],           // top
+      [0, h - fy, w, fy, 'y', h, h - fy],  // bottom
+    ];
+    ctx.save();
+    if (mode === 'alpha') ctx.globalCompositeOperation = 'destination-out';
+    for (const [ex, ey, ew, eh, axis, from, to] of edges) {
+      const g = axis === 'x'
+        ? ctx.createLinearGradient(from, 0, to, 0)
+        : ctx.createLinearGradient(0, from, 0, to);
+      if (mode === 'alpha') {
+        g.addColorStop(0, 'rgba(0,0,0,1)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+      } else {
+        const c = new THREE.Color(packColor);
+        const hex = c.getStyle().replace('rgb(', '').replace(')', '');
+        g.addColorStop(0, `rgba(${hex},1)`);
+        g.addColorStop(1, `rgba(${hex},0)`);
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(ex, ey, ew, eh);
+    }
+    ctx.restore();
+  };
+
+  if (transparent) {
+    // Decal mode: artwork covers the whole front, edges alpha-fade so
+    // the tinted crinkled film takes over toward the seams.
+    if (cfg && cfg._bgImage) {
+      drawCover(cfg._bgImage);
+      applyOverlayFull();
+      fadeEdges('alpha');
+    }
+  } else if (cfg && cfg._bgImage) {
+    drawCover(cfg._bgImage);
+    // light pack-color wash keeps it reading as printed film
     ctx.fillStyle = packColor;
-    ctx.globalAlpha = 0.32;
+    ctx.globalAlpha = 0.16;
     ctx.fillRect(0, 0, w, h);
     ctx.globalAlpha = 1;
-    // gentle darkening top+bottom for type
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, 'rgba(10,10,8,0.34)');
-    g.addColorStop(0.35, 'rgba(10,10,8,0)');
-    g.addColorStop(0.72, 'rgba(10,10,8,0)');
-    g.addColorStop(1, 'rgba(10,10,8,0.36)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+    applyOverlayFull();
+    fadeEdges('color');
   } else {
     ctx.globalAlpha = 0.93;
     ctx.fillStyle = packColor;
@@ -1322,10 +1421,9 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // User-controlled overlay BETWEEN background and type (tone + opacity) —
-  // full-surface on the printed film; in decal mode it already ran
-  // inside the artwork panel above.
-  if (!transparent) {
+  // User-controlled overlay BETWEEN background and type — on plain film
+  // only; artwork paths applied it above already.
+  if (!transparent && !(cfg && cfg._bgImage)) {
     const ovTone = (cfg && cfg.overlayTone) || 'none';
     const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
     if (ovTone !== 'none' && ovOp > 0) {
@@ -1355,9 +1453,9 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
     ctx.drawImage(off, pad, brandY, lw, lh);
   } else {
     ctx.fillStyle = ink;
-    ctx.font = `700 ${Math.round(w * 0.055)}px "Neue Rational Mono", monospace`;
+    ctx.font = `700 ${Math.round(w * 0.05)}px "Neue Rational Mono", monospace`;
     ctx.textBaseline = 'top';
-    ctx.fillText('FOOFAB', pad, brandY);
+    ctx.fillText('FOODCIETY', pad, brandY);
   }
   // Big stacked title — WTG-style chunky uppercase block.
   // The typo-style picker switches the typeface here too; the mono
@@ -1366,9 +1464,9 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
   const filmFont = (s) => filmStyle === 'mono' || filmStyle === 'clean'
     ? `800 ${s}px "Neue Rational Mono", "Arial Black", monospace`
     : titleFontFor(filmStyle, s);
-  const title = name.toUpperCase();
+  const title = titleTextFor(cfg, name);
   const maxW = w - pad * 2;
-  let size = Math.round(w * 0.17);
+  let size = Math.round(w * 0.17 * titleScaleFor(cfg));
   ctx.textBaseline = 'alphabetic';
   const measure = (t, s) => {
     ctx.font = filmFont(s);
@@ -1392,7 +1490,7 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
   }
   ctx.font = filmFont(size);
   ctx.fillStyle = ink;
-  const lineH = size * 1.04;
+  const lineH = size * 0.94;
   let ty = Math.round(h * 0.155) + size;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.22)';
@@ -1411,6 +1509,15 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
   ctx.fillText(`saure fruchtgummis · ${flavorTxt}`, pad, ty + Math.round(h * 0.012));
   ctx.globalAlpha = 1;
 
+  // Functional benefit line
+  if (cfg && cfg.func && cfg.func !== 'none' && cfg.funcLabel) {
+    ctx.globalAlpha = 0.75;
+    ctx.font = `500 ${Math.round(w * 0.036)}px "Neue Rational Mono", monospace`;
+    ctx.fillText((cfg.funcLabel + (cfg.funcActives ? ' · ' + cfg.funcActives : '')).toLowerCase(),
+      pad, ty + Math.round(h * 0.052));
+    ctx.globalAlpha = 1;
+  }
+
   // Bottom block: divider, handle, weight, edition note
   const divY = Math.round(h * 0.855);
   ctx.strokeStyle = ink;
@@ -1422,14 +1529,14 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
   ctx.fillStyle = ink;
   ctx.font = `700 ${Math.round(w * 0.045)}px "Neue Rational Mono", monospace`;
   ctx.textBaseline = 'top';
-  ctx.fillText(handle, pad, divY + Math.round(h * 0.02));
+  if (handle) ctx.fillText(handle, pad, divY + Math.round(h * 0.02));
   ctx.textAlign = 'right';
   ctx.fillText(`${cfg?.weight || 120}G`, w - pad, divY + Math.round(h * 0.02));
   ctx.textAlign = 'left';
 
   ctx.globalAlpha = 0.6;
   ctx.font = `italic 300 ${Math.round(w * 0.03)}px "Kreol Standard", "Georgia", serif`;
-  ctx.fillText('foofab edition', pad, divY + Math.round(h * 0.065));
+  ctx.fillText('foodciety edition', pad, divY + Math.round(h * 0.065));
   ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -1764,16 +1871,22 @@ const buildJar = (cfg) => {
   }
 
   const bodyGeo = new THREE.LatheGeometry(profile, 72);
+  // Real glass look: high transmission, near-zero roughness, strong
+  // clearcoat + env reflections.
   const glassMat = new THREE.MeshPhysicalMaterial({
-    color: linCol(new THREE.Color(0xf3f0e8)),
-    roughness: 0.42,
+    color: linCol(new THREE.Color(0xf8f6ef)),
+    roughness: 0.04,
     metalness: 0,
-    transmission: 0.55,
+    transmission: 0.92,
     transparent: true,
-    opacity: 0.72,
-    ior: 1.45,
+    opacity: 0.5,
+    ior: 1.5,
+    thickness: 0.35,
+    clearcoat: 1,
+    clearcoatRoughness: 0.04,
     side: THREE.DoubleSide,
   });
+  glassMat.envMapIntensity = 1.1;
   const body = new THREE.Mesh(bodyGeo, glassMat);
   body.castShadow = true;
   group.add(body);
@@ -1858,6 +1971,39 @@ const buildTin = (cfg) => {
   lidTop.position.y = h / 2 + 0.05;
   lidTop.castShadow = true;
   group.add(lidTop);
+
+  // Logo printed on the lid (uploaded logo, else foodciety placeholder)
+  {
+    const brandImg = (cfg && cfg._logoImage && cfg._logoImage.width) ? cfg._logoImage : __brandLogoImg;
+    if (brandImg && brandImg.width) {
+      const pc = document.createElement('canvas');
+      pc.width = pc.height = 512;
+      const px = pc.getContext('2d');
+      const lidLight = relLuminance(cfg?.packColor || '#c85250') > 0.55;
+      const ar = brandImg.width / brandImg.height;
+      let lw = 340, lh = lw / ar;
+      if (lh > 200) { lh = 200; lw = lh * ar; }
+      const off = document.createElement('canvas');
+      off.width = Math.max(2, Math.round(lw)); off.height = Math.max(2, Math.round(lh));
+      const octx = off.getContext('2d');
+      octx.drawImage(brandImg, 0, 0, off.width, off.height);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = lidLight ? '#333333' : '#fffef2';
+      octx.fillRect(0, 0, off.width, off.height);
+      px.drawImage(off, 256 - lw / 2, 256 - lh / 2, lw, lh);
+      const printTex = new THREE.CanvasTexture(pc);
+      if (THREE.sRGBEncoding) printTex.encoding = THREE.sRGBEncoding;
+      const printMat = new THREE.MeshBasicMaterial({
+        map: printTex, transparent: true, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -2,
+      });
+      const lidDomeTop = h / 2 + 0.05 + (lidTop.geometry.parameters ? lidTop.geometry.parameters.radius : 1) * 0.14;
+      const print = new THREE.Mesh(new THREE.CircleGeometry(lidR * 0.6, 48), printMat);
+      print.rotation.x = -Math.PI / 2;
+      print.position.y = lidDomeTop + 0.012;
+      group.add(print);
+    }
+  }
   // skirt lower lip
   const skirtLip = new THREE.Mesh(new THREE.TorusGeometry(lidR, 0.028, 8, 96), lidMat);
   skirtLip.position.y = h / 2 - lidH + 0.06;
@@ -1999,17 +2145,36 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
   ctx.fillStyle = sheen;
   ctx.fillRect(0, 0, w, h);
 
-  // tiny centered brand line
-  ctx.fillStyle = cream;
-  ctx.globalAlpha = 0.85;
-  ctx.font = `500 ${Math.round(h * 0.08)}px "Neue Rational Mono", monospace`;
-  ctx.textBaseline = 'top';
-  ctx.textAlign = 'center';
-  try { ctx.letterSpacing = `${Math.round(h * 0.03)}px`; } catch (e) {}
-  ctx.fillText('F O O F A B', w / 2, Math.round(h * 0.09));
-  try { ctx.letterSpacing = '0px'; } catch (e) {}
-  ctx.textAlign = 'left';
-  ctx.globalAlpha = 1;
+  // centered brand logo — uploaded logo, else the foodciety placeholder
+  const brandImg = (cfg && cfg._logoImage && cfg._logoImage.width) ? cfg._logoImage : __brandLogoImg;
+  if (brandImg && brandImg.width) {
+    const maxLH = h * 0.14, maxLW = w * 0.3;
+    const ar = brandImg.width / brandImg.height;
+    let lh = maxLH, lw = lh * ar;
+    if (lw > maxLW) { lw = maxLW; lh = lw / ar; }
+    const off = document.createElement('canvas');
+    off.width = Math.max(2, Math.round(lw * 2));
+    off.height = Math.max(2, Math.round(lh * 2));
+    const octx = off.getContext('2d');
+    octx.drawImage(brandImg, 0, 0, off.width, off.height);
+    octx.globalCompositeOperation = 'source-in';
+    octx.fillStyle = cream;
+    octx.fillRect(0, 0, off.width, off.height);
+    ctx.globalAlpha = 0.92;
+    ctx.drawImage(off, w / 2 - lw / 2, Math.round(h * 0.07), lw, lh);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = cream;
+    ctx.globalAlpha = 0.85;
+    ctx.font = `500 ${Math.round(h * 0.08)}px "Neue Rational Mono", monospace`;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    try { ctx.letterSpacing = `${Math.round(h * 0.03)}px`; } catch (e) {}
+    ctx.fillText('F O O D C I E T Y', w / 2, Math.round(h * 0.09));
+    try { ctx.letterSpacing = '0px'; } catch (e) {}
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
 
   // huge centered wordmark — auto-shrink to one or two lines
   const barStyle = (cfg && cfg.typoStyle) || 'mono';
@@ -2043,32 +2208,42 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
   ctx.fillStyle = ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const blockH = lines.length * size * 1.06;
+  const blockH = lines.length * size * 0.96;
   const cy = h * 0.47;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.28)';
   ctx.shadowBlur = Math.round(h * 0.02);
   ctx.shadowOffsetY = Math.round(h * 0.008);
   lines.forEach((line, i) => {
-    ctx.fillText(line, w / 2, cy - blockH / 2 + size * 0.53 + i * size * 1.06);
+    ctx.fillText(line, w / 2, cy - blockH / 2 + size * 0.48 + i * size * 0.96);
   });
   ctx.restore();
 
-  // subline centered — flavor
+  // subline right under the wordmark — flavor (+ functional benefit)
   const flavorTxt = ((cfg?.flavorDe || cfg?.flavor || 'schokolade') + '').toLowerCase();
   ctx.fillStyle = cream;
-  ctx.font = `500 ${Math.round(h * 0.11)}px "Neue Rational Mono", monospace`;
-  ctx.fillText(`${flavorTxt} edition`, w / 2, h * 0.78);
+  ctx.font = `500 ${Math.round(h * 0.1)}px "Neue Rational Mono", monospace`;
+  ctx.fillText(`${flavorTxt} edition`, w / 2, cy + blockH / 2 + h * 0.09);
+  if (cfg && cfg.func && cfg.func !== 'none' && cfg.funcLabel) {
+    ctx.globalAlpha = 0.8;
+    ctx.font = `500 ${Math.round(h * 0.07)}px "Neue Rational Mono", monospace`;
+    ctx.fillText((cfg.funcLabel + (cfg.funcActives ? ' · ' + cfg.funcActives : '')).toLowerCase(),
+      w / 2, cy + blockH / 2 + h * 0.2);
+    ctx.globalAlpha = 1;
+  }
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
-  // bottom row: weight left, handle right
+  // bottom row: weight left, creator name right (optional)
   ctx.globalAlpha = 0.75;
   ctx.font = `500 ${Math.round(h * 0.075)}px "Neue Rational Mono", monospace`;
   ctx.fillText(`NET WT ${cfg?.weight || 120}G`, pad, h - Math.round(h * 0.14));
-  ctx.textAlign = 'right';
-  ctx.fillText('@' + (cfg?.handle || 'foodcreator'), w - pad, h - Math.round(h * 0.14));
-  ctx.textAlign = 'left';
+  const barHandle = ((cfg && cfg.handle) || '').trim();
+  if (barHandle) {
+    ctx.textAlign = 'right';
+    ctx.fillText(barHandle, w - pad, h - Math.round(h * 0.14));
+    ctx.textAlign = 'left';
+  }
   ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -2079,6 +2254,10 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
 };
 
 const buildBar = (cfg) => {
+  // Scanned bar when the GLB is ready — procedural fallback
+  if (cfg && cfg._barScene) {
+    try { return buildBarFromGLB(cfg, cfg._barScene); } catch (e) { /* fall through */ }
+  }
   const group = new THREE.Group();
   const packColor = cfg?.packColor || cfg?.color || '#4a2620';
   const tints = PACK_TINTS(packColor);
@@ -2286,31 +2465,33 @@ const buildCalendar = (cfg) => {
   ctx.fillText('24 TÜRCHEN', W - W * 0.06, H * 0.055);
   ctx.textAlign = 'left';
 
-  // bottom-left: FOOFAB-Edition
+  // bottom-left: FOODCIETY-Edition
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `800 ${Math.round(H * 0.065)}px "Neue Rational Mono", monospace`;
+  ctx.font = `800 ${Math.round(H * 0.06)}px "Neue Rational Mono", monospace`;
   ctx.fillStyle = '#f6f3ec';
-  ctx.fillText('FOOFAB', W * 0.07, H * 0.9);
-  const fw = ctx.measureText('FOOFAB').width;
-  ctx.font = `italic 700 ${Math.round(H * 0.065)}px "Neue Rational Mono", monospace`;
+  ctx.fillText('FOODCIETY', W * 0.07, H * 0.9);
+  const fw = ctx.measureText('FOODCIETY').width;
+  ctx.font = `italic 700 ${Math.round(H * 0.06)}px "Neue Rational Mono", monospace`;
   ctx.fillStyle = accent;
   ctx.fillText('-Edition', W * 0.07 + fw, H * 0.9);
 
-  // bottom-right: handle chip
-  const handle = '@' + (cfg?.handle || 'foodcreator');
-  ctx.font = `700 ${Math.round(H * 0.045)}px "Neue Rational Mono", monospace`;
-  const hw2 = ctx.measureText(handle).width;
-  const chipW = hw2 + W * 0.03, chipH = H * 0.085;
-  const chipX = W - W * 0.055 - chipW, chipY = H * 0.845;
-  ctx.fillStyle = '#f6f3ec';
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(chipX, chipY, chipW, chipH, chipH * 0.18);
-  else ctx.rect(chipX, chipY, chipW, chipH);
-  ctx.fill();
-  ctx.fillStyle = '#16140f';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(handle, chipX + W * 0.015, chipY + chipH / 2);
-  ctx.textBaseline = 'alphabetic';
+  // bottom-right: creator name chip (optional)
+  const handle = ((cfg && cfg.handle) || '').trim();
+  if (handle) {
+    ctx.font = `700 ${Math.round(H * 0.045)}px "Neue Rational Mono", monospace`;
+    const hw2 = ctx.measureText(handle).width;
+    const chipW = hw2 + W * 0.03, chipH = H * 0.085;
+    const chipX = W - W * 0.055 - chipW, chipY = H * 0.845;
+    ctx.fillStyle = '#f6f3ec';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(chipX, chipY, chipW, chipH, chipH * 0.18);
+    else ctx.rect(chipX, chipY, chipW, chipH);
+    ctx.fill();
+    ctx.fillStyle = '#16140f';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(handle, chipX + W * 0.015, chipY + chipH / 2);
+    ctx.textBaseline = 'alphabetic';
+  }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.anisotropy = 8;
@@ -2441,6 +2622,89 @@ const loadPouchGLB = () => {
   return __pouchGLBPromise;
 };
 
+// Brand logo placeholder for prints (recolored per surface); replaced
+// by the uploaded logo when one exists.
+let __brandLogoImg = null;
+try {
+  const __bl = new Image();
+  __bl.onload = () => { __brandLogoImg = __bl; };
+  __bl.src = 'assets/foodciety-logo.png';
+} catch (e) { /* optional */ }
+
+// Chocolate-bar GLB (scan, lying flat with the face up) — loaded once.
+let __barGLBPromise = null;
+const loadBarGLB = () => {
+  if (__barGLBPromise) return __barGLBPromise;
+  __barGLBPromise = new Promise((resolve) => {
+    if (!THREE.GLTFLoader) return resolve(null);
+    try {
+      new THREE.GLTFLoader().load('assets/models/chocolate-bar.glb',
+        (gltf) => resolve(gltf.scene || null),
+        undefined,
+        () => resolve(null));
+    } catch (e) { resolve(null); }
+  });
+  return __barGLBPromise;
+};
+
+const buildBarFromGLB = (cfg, src) => {
+  const group = new THREE.Group();
+  const packColor = cfg?.packColor || '#4a2620';
+  const inner = new THREE.Group();
+  const bar = src.clone(true);
+  // scan lies flat, face up (+Y) — stand it upright facing the camera
+  bar.rotation.x = Math.PI / 2;
+  inner.add(bar);
+  inner.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(inner);
+  const size = box.getSize(new THREE.Vector3());
+  const s = 3.4 / (size.x || 1);
+  inner.scale.setScalar(s);
+  inner.updateMatrixWorld(true);
+  const box2 = new THREE.Box3().setFromObject(inner);
+  const center = box2.getCenter(new THREE.Vector3());
+  inner.position.sub(center);
+  inner.updateMatrixWorld(true);
+
+  let bodyMesh = null;
+  inner.traverse((c) => {
+    if (c.isMesh) {
+      bodyMesh = c;
+      c.userData.__keepMaps = true;
+      const m = c.material ? c.material.clone() : null;
+      if (m) {
+        m.color = linCol(new THREE.Color(packColor));
+        if (m.emissive) m.emissive.setRGB(0, 0, 0);
+        m.emissiveMap = null;
+        m.envMapIntensity = 0.8;
+        m.needsUpdate = true;
+        c.material = m;
+      }
+    }
+  });
+  group.add(inner);
+
+  // wrap print projected onto the front
+  if (bodyMesh && THREE.DecalGeometry) {
+    try {
+      const bb = new THREE.Box3().setFromObject(inner);
+      const sz = bb.getSize(new THREE.Vector3());
+      const dPos = new THREE.Vector3(0, 0, bb.max.z);
+      const dSize = new THREE.Vector3(sz.x * 0.97, sz.y * 0.92, sz.z * 0.8);
+      const tex = drawBarWrapCanvas({ ...cfg, packColor }, dSize.x, dSize.y);
+      const decalGeo = new THREE.DecalGeometry(bodyMesh, dPos, new THREE.Euler(0, 0, 0), dSize);
+      const decalMat = new THREE.MeshPhysicalMaterial({
+        map: tex, transparent: true, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -4,
+        roughness: 0.45, metalness: 0.08,
+      });
+      decalMat.envMapIntensity = 0.6;
+      group.add(new THREE.Mesh(decalGeo, decalMat));
+    } catch (e) { /* decal optional */ }
+  }
+  return group;
+};
+
 const buildPouchFromGLB = (cfg, src) => {
   const group = new THREE.Group();
   const packColor = cfg?.packColor || '#2f6b3f';
@@ -2487,7 +2751,9 @@ const buildPouchFromGLB = (cfg, src) => {
       const sz = bb.getSize(new THREE.Vector3());
       const dPos = new THREE.Vector3(0, sz.y * 0.03, bb.max.z);
       const dRot = new THREE.Euler(0, 0, 0);
-      const dSize = new THREE.Vector3(sz.x * 0.8, sz.y * 0.74, Math.max(0.7, sz.z * 1.6));
+      // shallow projection depth — deep enough to hug the wrinkles, but
+      // never reaching the back face (which would mirror the print)
+      const dSize = new THREE.Vector3(sz.x * 0.8, sz.y * 0.74, sz.z * 0.8);
       const tex = drawFilmCanvas(cfg, dSize.x, dSize.y, { transparent: true });
       const decalGeo = new THREE.DecalGeometry(bodyMesh, dPos, dRot, dSize);
       const decalMat = new THREE.MeshPhysicalMaterial({
@@ -2547,6 +2813,13 @@ const makeSparkleTexture = () => {
   return __sparkleTex;
 };
 
+// Springy overshoot easing for the spawn "pop"
+const easeOutBack = (t) => {
+  const c1 = 1.70158, c3 = c1 + 1;
+  const u = t - 1;
+  return 1 + c3 * u * u * u + c1 * u * u;
+};
+
 const SPARKLE_SPOTS = [
   { x: -2.35, y: 2.0,  z: -0.4, s: 0.42 },
   { x: 2.6,  y: 1.7,  z: 0.3,  s: 0.55 },
@@ -2559,7 +2832,7 @@ const SPARKLE_SPOTS = [
   { x: 2.1,  y: 0.6,  z: 1.0,  s: 0.2 },
 ];
 
-const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => {
+const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true, zoom = 'out', frameless = false }) => {
   const mountRef = React.useRef(null);
   const sceneRef = React.useRef(null);
   const rendererRef = React.useRef(null);
@@ -2567,6 +2840,8 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
   const objectRef = React.useRef(null);
   const tiltRef = React.useRef(tilt);
   tiltRef.current = tilt;
+  const zoomRef = React.useRef(zoom);
+  zoomRef.current = zoom;
   // Flavor-tinted stage color — the whole backdrop follows the flavor
   const flavorHex = gummyColorFor(cfg);
 
@@ -2671,23 +2946,31 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       } catch (e) { /* keep canvas env */ }
     }
 
-    // Shadow-only ground — the flavor backdrop stays a clean color field
-    // (no floor horizon), the product still casts a soft grounding shadow.
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(40, 40),
-      new THREE.ShadowMaterial({ opacity: 0.16 })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -2.3;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // No ground plane and no cast shadows — the product floats free on
+    // the pure flavor backdrop.
+    renderer.shadowMap.enabled = false;
 
     sceneRef.current = scene;
     cameraRef.current = camera;
     rendererRef.current = renderer;
 
     let raf;
+    const look = { x: 0, y: 0 };
     const tick = () => {
+      // Smooth zoom between three framings: 'out' full view, 'in'
+      // close-up on the pack, 'piece' centers one floating gummy.
+      const Z = zoomRef.current;
+      const T = Z === 'piece'
+        ? { x: 2.4, y: 0.68, z: 3.6 }
+        : Z === 'in'
+          ? { x: 0, y: 0, z: 5.2 }
+          : { x: 0, y: 0, z: 9 };
+      camera.position.x += (T.x - camera.position.x) * 0.07;
+      camera.position.y += (T.y - camera.position.y) * 0.07;
+      camera.position.z += (T.z - camera.position.z) * 0.07;
+      look.x += (T.x - look.x) * 0.07;
+      look.y += (T.y - look.y) * 0.07;
+      camera.lookAt(look.x, look.y, 0);
       const obj = objectRef.current;
       if (obj) {
         // Locked hero view: the product hovers and wiggles gently around
@@ -2698,16 +2981,36 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
         const wigX = Math.sin(now * 0.34) * 1.4;
         obj.rotation.y = ((t.y + wigY) * Math.PI) / 180;
         obj.rotation.x = ((t.x + wigX) * Math.PI) / 180;
-        // hover a tick above center so the product sits higher in frame
-        obj.position.y = 0.24 + Math.sin(now * 0.8) * 0.09;
+        // hover around vertical center of the frame
+        obj.position.y = 0.06 + Math.sin(now * 0.8) * 0.09;
+
+        // spawn pop — the pack bounces slightly bigger, the pieces burst
+        // from the center outward. age since (re)build:
+        const age = now - (obj.userData.bornAt || 0);
+        const packK = Math.min(1, age / 0.42);
+        obj.scale.setScalar(0.9 + 0.1 * easeOutBack(packK));
+
         obj.traverse((c) => {
           const u = c.userData;
-          if (u && u.floatAmp) {
+          if (u && u.spawn) {
+            const k = Math.min(1, Math.max(0, (age - u.spawn.delay) / 0.5));
+            const e = easeOutBack(k);
+            if (k < 1) {
+              c.position.set(u.spawn.tx * e, u.spawn.ty * e, u.spawn.tz * e);
+              c.scale.setScalar(u.spawn.s * Math.max(0.001, e));
+            } else {
+              c.position.x = u.spawn.tx;
+              c.position.z = u.spawn.tz;
+              c.scale.setScalar(u.spawn.s);
+              c.position.y = u.baseY + Math.sin(now * u.floatSpeed + u.floatPhase) * u.floatAmp;
+            }
+          } else if (u && u.floatAmp) {
             c.position.y = u.baseY + Math.sin(now * u.floatSpeed + u.floatPhase) * u.floatAmp;
           }
           if (u && u.twinkle) {
-            const s = u.baseS * (0.8 + 0.35 * Math.sin(now * u.twSpeed + u.twPhase));
-            c.scale.set(s, s, 1);
+            const gate = Math.min(1, Math.max(0, (age - 0.25) / 0.4));
+            const s = u.baseS * gate * (0.8 + 0.35 * Math.sin(now * u.twSpeed + u.twPhase));
+            c.scale.set(Math.max(0.001, s), Math.max(0.001, s), 1);
           }
         });
       }
@@ -2744,10 +3047,10 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
     if (!scene) return;
     const c = new THREE.Color(flavorHex);
     const white = new THREE.Color('#ffffff');
-    // Punchier stage color — clearly the flavor, not just a whisper of it
-    const top = c.clone().lerp(white, 0.6);
-    const mid = c.clone().lerp(white, 0.46);
-    const bot = c.clone().lerp(white, 0.28);
+    // Punchy stage color — full-on flavor
+    const top = c.clone().lerp(white, 0.44);
+    const mid = c.clone().lerp(white, 0.3);
+    const bot = c.clone().lerp(white, 0.12);
     const bc = document.createElement('canvas');
     bc.width = 16; bc.height = 512;
     const bx = bc.getContext('2d');
@@ -2788,11 +3091,18 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       }
     };
 
-    const build = (bgImage, logoImage, shapeImage, pouchScene) => {
+    const build = (bgImage, logoImage, shapeImage, packScene) => {
       if (cancelled) return;
       disposePrev();
       const builder = BUILDERS[cfg.pack] || BUILDERS.pouch;
-      const obj = builder({ ...cfg, _bgImage: bgImage, _logoImage: logoImage, _pieces: showPieces, _pouchScene: pouchScene || null });
+      const obj = builder({
+        ...cfg,
+        _bgImage: bgImage,
+        _logoImage: logoImage,
+        _pieces: showPieces,
+        _pouchScene: cfg.pack === 'pouch' ? (packScene || null) : null,
+        _barScene: cfg.pack === 'bar' ? (packScene || null) : null,
+      });
       obj.traverse((c) => {
         if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
       });
@@ -2828,8 +3138,9 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
           const m = isNuts
             ? new THREE.Mesh(makeNutGeometry(i), makeNutMaterial(i))
             : new THREE.Mesh(geo, mat);
-          m.scale.setScalar(p.s);
-          m.position.set(p.x, p.y, p.z);
+          // spawn pop: pieces burst from the center outward to their spot
+          m.scale.setScalar(0.001);
+          m.position.set(0, 0, 0);
           m.rotation.set(p.rx, p.ry, p.rz);
           m.castShadow = true;
           m.name = '__floating_shape_' + i;
@@ -2837,6 +3148,7 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
           m.userData.floatSpeed = 0.55 + (i % 3) * 0.18;
           m.userData.floatPhase = i * 1.7;
           m.userData.baseY = p.y;
+          m.userData.spawn = { tx: p.x, ty: p.y, tz: p.z, s: p.s, delay: 0.06 + i * 0.05 };
           obj.add(m);
         });
       }
@@ -2858,6 +3170,8 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
         obj.add(sp);
       });
 
+      // spawn timestamp drives the pop-in animation in the tick loop
+      obj.userData.bornAt = performance.now() / 1000;
       scene.add(obj);
       objectRef.current = obj;
     };
@@ -2872,15 +3186,22 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       img.src = src;
     });
 
+    // Make sure the chosen display face is decoded before the canvas
+    // draws with it — otherwise the first render falls back silently.
+    const fontReady = (document.fonts && document.fonts.load)
+      ? document.fonts.load(titleFontFor(cfg.typoStyle || 'editorial', 48), 'ABgy').catch(() => null)
+      : Promise.resolve(null);
+
     Promise.all([
-      loadImg(cfg.labelBgUrl),
+      loadImg(cfg.labelBgUrl || cfg.photo),
       loadImg(cfg.logo),
       loadImg(cfg.shapeImg),
-      cfg.pack === 'pouch' ? loadPouchGLB() : Promise.resolve(null),
-    ]).then(([bg, logo, shape, pouchScene]) => build(bg, logo, shape, pouchScene));
+      cfg.pack === 'pouch' ? loadPouchGLB() : (cfg.pack === 'bar' ? loadBarGLB() : Promise.resolve(null)),
+      fontReady,
+    ]).then(([bg, logo, shape, packScene]) => build(bg, logo, shape, packScene));
 
     return () => { cancelled = true; };
-  }, [cfg.pack, cfg.base, cfg.color, cfg.packColor, cfg.name, cfg.handle, cfg.flavor, cfg.flavorDe, cfg.shapeId, cfg.shapeName, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity, cfg.shapeImg, cfg.calFill, showPieces]);
+  }, [cfg.pack, cfg.base, cfg.color, cfg.packColor, cfg.name, cfg.handle, cfg.flavor, cfg.flavorDe, cfg.shapeId, cfg.shapeName, cfg.weight, cfg.labelBgUrl, cfg.photo, cfg.typoStyle, cfg.titleCase, cfg.titleScale, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity, cfg.shapeImg, cfg.calFill, cfg.func, cfg.funcLabel, showPieces]);
 
   // Hero view with drag-to-rotate: pointer drag adjusts the base tilt,
   // the float + wiggle animation rides on top. No HUD chrome.
@@ -2911,10 +3232,11 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
   return (
     <div className="pv3d" style={{
       width: '100%',
-      aspectRatio: '1 / 1.15',
+      aspectRatio: frameless ? 'auto' : '1 / 1.15',
+      height: frameless ? '100%' : undefined,
       position: 'relative',
-      background: `color-mix(in srgb, ${flavorHex} 42%, #ffffff)`,
-      border: '1px solid var(--line)',
+      background: `color-mix(in srgb, ${flavorHex} 58%, #ffffff)`,
+      border: frameless ? 'none' : '1px solid var(--line)',
       overflow: 'hidden',
       cursor: 'grab',
       touchAction: 'none',

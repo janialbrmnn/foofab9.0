@@ -44,27 +44,53 @@ const Landing = ({ onEnter, lang = 'en', onLang }) => {
     </div>
   );
 
-  // Orb + tagline underneath: two rows with an up arrow pointing at the
-  // button — "be careful. / this could turn epic."
+  // Orb with the tagline underneath — left-aligned all-caps semibold
+  // mono, tight leading, and a hand-drawn swoosh arrow curving from the
+  // left end of the type up to the power button.
   const orbBlock = (size) => (
     <div style={{ textAlign: 'center' }}>
       <PowerOrb size={size} pulsing onClick={onEnter} label="enter foodciety" />
       <button onClick={onEnter} style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+        display: 'block',
+        position: 'relative',
         width: 'fit-content',
-        margin: '22px auto 0',
-        padding: '8px 12px', minHeight: 44,
+        margin: '16px auto 0',
+        padding: '6px 4px 6px 6px',
+        minHeight: 44,
         background: 'transparent', color: 'var(--fg)',
         cursor: 'pointer',
-        lineHeight: 1.25,
+        textAlign: 'left',
       }}
         onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; }}
         onMouseLeave={e => { e.currentTarget.style.color = 'var(--fg)'; }}
       >
-        <Arrow dir="up" size={15} />
-        <span style={{ fontSize: 'calc(15px * var(--scale))' }}>{t.tagA}</span>
-        <span style={{ fontSize: 'calc(15px * var(--scale))', whiteSpace: 'nowrap' }}>
-          {t.tagB} <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>{t.tagC}</span>
+        {/* hand-drawn swoosh: starts at the type's left end and curves
+            up-right, aiming at the CENTER of the orb (tip stays outside).
+            Tapered double-stroke gives the pen-drawn thickness change. */}
+        <svg viewBox="0 0 60 78" fill="none" style={{
+          position: 'absolute',
+          left: -14, top: -62,
+          width: 52, height: 72,
+          color: 'var(--accent)',
+          pointerEvents: 'none',
+        }}>
+          <path d="M8 74 C 2 52, 8 30, 24 17 C 31 11.5, 38 8, 44 6.5"
+            stroke="currentColor" strokeWidth="3.1" strokeLinecap="round" fill="none" />
+          <path d="M24 17 C 31 11.5, 38 8, 45 6.4"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path d="M37 1.5 L 47 6 L 41 15"
+            stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+        <span style={{
+          display: 'block',
+          fontSize: 'calc(14px * var(--scale))',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          lineHeight: 1.12,
+        }}>
+          {t.tagA}<br/>
+          {t.tagB} <span style={{ color: 'var(--accent)' }}>{t.tagC}.</span>
         </span>
       </button>
     </div>
@@ -79,7 +105,7 @@ const Landing = ({ onEnter, lang = 'en', onLang }) => {
         </div>
         <h1 className="fade-up" style={{ fontSize: 'clamp(38px, 10.5vw, 60px)', lineHeight: 1.02, letterSpacing: '-0.02em', color: 'var(--fg)', marginTop: 40 }}>
           {t.h1a}<br/>
-          {t.h1b} <span className="word-em" style={{ fontSize: '1.06em', color: 'var(--accent)' }}>{t.h1c}</span>.
+          {t.h1b} <span className="word-em" style={{ fontSize: '1.06em', color: 'var(--accent)' }}>{t.h1c}.</span>
         </h1>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: 28 }}>
           {orbBlock(170)}
@@ -124,7 +150,7 @@ const Landing = ({ onEnter, lang = 'en', onLang }) => {
             fontSize: '1.06em',
             color: 'var(--accent)',
             display: 'inline-block',
-          }}>{t.h1c}</span>.
+          }}>{t.h1c}.</span>
         </h1>
       </div>
 

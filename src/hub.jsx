@@ -104,7 +104,7 @@ const Hub = ({ onGo, lang = 'en', onBack }) => {
           lineHeight: 1.05,
           maxWidth: 900,
         }}>
-          {t.h2a} {t.h2b} <span className="word-em" style={{ fontSize: '1.05em', color: 'var(--accent)', textTransform: 'none' }}>{t.h2c}</span>.
+          {t.h2a} {t.h2b} <span className="word-em" style={{ fontSize: '1.05em', color: 'var(--accent)' }}>{t.h2c}.</span>
         </h2>
       </div>
 
@@ -159,7 +159,7 @@ const ComingSoon = ({ lang = 'en', onBack }) => {
         fontSize: 'calc(72px * var(--scale))',
         letterSpacing: '-0.02em', lineHeight: 1,
       }}>
-        coming <span className="word-em" style={{ fontSize: '1.05em', color: 'var(--accent)', textTransform: 'none' }}>soon</span>.
+        coming <span className="word-em" style={{ fontSize: '1.05em', color: 'var(--accent)' }}>soon.</span>
       </h1>
       <p style={{
         marginTop: 28, maxWidth: 480,

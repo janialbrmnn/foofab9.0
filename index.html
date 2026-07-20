@@ -50,6 +50,42 @@
     src: url('assets/fonts/KreolStandard-LightItalic.otf') format('opentype');
     font-weight: 300; font-style: italic; font-display: swap;
   }
+  /* Packaging display faces — curated set for the label typo picker */
+  @font-face {
+    font-family: 'PP Kyoto';
+    src: url('assets/fonts/custom/PPKyoto-Heavy.otf') format('opentype');
+    font-weight: 800; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'PP Pangaia';
+    src: url('assets/fonts/custom/PPPangaia-Medium.otf') format('opentype');
+    font-weight: 500; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'PP Museum';
+    src: url('assets/fonts/custom/PPMuseum-Variable.ttf') format('truetype');
+    font-weight: 300 900; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Aretha';
+    src: url('assets/fonts/custom/Aretha-Black.ttf') format('truetype');
+    font-weight: 900; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Fruitos';
+    src: url('assets/fonts/custom/FruitosR.ttf') format('truetype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'BubbleLock';
+    src: url('assets/fonts/custom/CFBubblelock.otf') format('opentype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Rogly';
+    src: url('assets/fonts/custom/Rogly.ttf') format('truetype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
 </style>
 <script>
 // Tweakable defaults — rewritten on disk by the host
@@ -68,7 +104,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     --fg-2: #454545;
     --fg-3: #8c8c8c;
     --line: #e2e0dc;
-    --accent: oklch(0.72 0.14 50);        /* warm terracotta */
+    --accent: oklch(0.7 0.19 45);         /* punchy CI orange */
     --accent-ink: #16140f;
     --scale: 1;
     --serif: "Kreol Standard", "Georgia", serif;
@@ -83,7 +119,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     --line: #332f28;
     --accent-ink: #16140f;
   }
-  [data-accent="terracotta"] { --accent: oklch(0.72 0.14 50); }
+  [data-accent="terracotta"] { --accent: oklch(0.7 0.19 45); }
   [data-accent="olive"]      { --accent: oklch(0.66 0.1 115); }
   [data-accent="rose"]       { --accent: oklch(0.72 0.14 15); }
   [data-accent="ink"]        { --accent: #16140f; --accent-ink: #ece9e2; }
@@ -110,10 +146,11 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   .serif { font-family: var(--serif); text-transform: none; letter-spacing: 0; font-weight: 300; }
   em.word, .word-em { font-family: var(--serif); font-style: italic; text-transform: none; font-weight: 300 !important; }
 
-  /* Headlines: Neue Rational Mono Bold (override inline fontWeight: 400) */
-  h1, h2, h3, h4 { font-weight: 700 !important; font-family: var(--mono); }
+  /* Headlines: Neue Rational Mono Bold, ALL CAPS — italic serif accents
+     go caps too. Mono word gaps are huge, so tighten word-spacing. */
+  h1, h2, h3, h4 { font-weight: 700 !important; font-family: var(--mono); text-transform: uppercase; word-spacing: -0.34ch; }
   h1 .word-em, h2 .word-em, h3 .word-em,
-  h1 em.word, h2 em.word, h3 em.word { font-weight: 300 !important; }
+  h1 em.word, h2 em.word, h3 em.word { font-weight: 300 !important; text-transform: uppercase; word-spacing: 0; }
   #root { min-height: 100vh; }
 
   /* Selection */
@@ -284,6 +321,26 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   }
   .swatch.active { outline: 1px solid var(--fg); outline-offset: 2px; }
 
+  /* Config back-overlay only exists on mobile (shown in media block) */
+  .pv-back-overlay { display: none; }
+
+  /* Floating controls on the product preview (all viewports) */
+  .pv-reset, .pv-zoom {
+    position: absolute;
+    z-index: 42;
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px;
+    background: color-mix(in srgb, var(--bg) 72%, transparent);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid var(--line);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .pv-reset { top: 10px; right: 12px; }
+  .pv-zoom  { bottom: 12px; right: 12px; }
+  .pv-reset:hover, .pv-zoom:hover { color: var(--accent); border-color: var(--accent); }
+
   /* ───────────────────────────────────────────────────────────────
      MOBILE  < 768px
      Strategy: global scale-down + hamburger nav + stack grids +
@@ -387,23 +444,50 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     h2 { font-size: clamp(26px, 6.5vw, 40px) !important; line-height: 1.1 !important; }
     h3 { font-size: clamp(22px, 5.5vw, 32px) !important; line-height: 1.15 !important; }
   /* Configurator: the product preview stays PINNED at the top while the
-     options scroll underneath (Porsche-configurator pattern). The page
-     gets padding equal to the preview height; the in-grid slot collapses. */
-  .config-page { padding-top: calc(36vh + 72px) !important; }
+     options scroll underneath (Porsche-configurator pattern). Full-width
+     preview, and the step bar pins right below it. */
+  .config-page { padding-top: calc(44vh + 134px) !important; }
+  /* on mobile the reset button sits below the nav overlap, like back */
+  .pv-reset { top: 34px; }
   .mobile-preview-first { order: -1 !important; margin: 0 !important; height: 0; overflow: visible; }
   .mobile-preview-first .m-preview-sticky {
     position: fixed !important;
     top: 48px !important;
-    left: 14px !important;
-    right: 14px !important;
-    height: 36vh !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 44vh !important;
     z-index: 40;
   }
   .m-preview-sticky .pv3d {
     aspect-ratio: auto !important;
     height: 100% !important;
+    border-left: none !important;
+    border-right: none !important;
     box-shadow: 0 14px 34px rgba(22, 20, 15, 0.16);
   }
+  .mobile-stepper {
+    position: fixed !important;
+    top: calc(48px + 44vh) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 39;
+    background: var(--bg);
+    margin: 0 !important;
+    border-bottom: 1px solid var(--line);
+  }
+  /* back button floats small on top of the pinned preview (below the
+     fixed nav, which overlaps the preview's top edge) */
+  .pv-back-overlay {
+    display: block !important;
+    position: absolute;
+    top: 34px; left: 12px;
+    z-index: 42;
+    padding: 4px 8px;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+  .config-back-header { display: none !important; }
 
   /* Configurator: more breathing room between stepper and content */
   .mobile-stepper { margin-bottom: 28px !important; }
