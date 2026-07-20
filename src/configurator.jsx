@@ -37,12 +37,25 @@ const DEFAULT_PACK_FOR_BASE = {
 };
 
 const STEPS = [
-  { k: '01', id: 'base',    label: 'base',      de: 'basis' },
-  { k: '02', id: 'shape',   label: 'shape',     de: 'form' },
-  { k: '03', id: 'flavor',  label: 'flavor',    de: 'geschmack' },
-  { k: '04', id: 'pack',    label: 'packaging', de: 'verpackung' },
-  { k: '05', id: 'brand',   label: 'branding',  de: 'branding' },
-  { k: '06', id: 'review',  label: 'drop it',   de: 'drop it' },
+  { k: '01', id: 'base',    label: 'base',       de: 'basis' },
+  { k: '02', id: 'shape',   label: 'shape',      de: 'form' },
+  { k: '03', id: 'flavor',  label: 'flavor',     de: 'geschmack' },
+  { k: '04', id: 'func',    label: 'function',   de: 'funktion' },
+  { k: '05', id: 'brand',   label: 'branding',   de: 'branding' },
+  { k: '06', id: 'review',  label: 'drop it',    de: 'drop it' },
+];
+
+// Functional benefits — presets plus a free-text field. Stored on cfg as
+// func (id) + funcNote (own words).
+const FUNCTIONS = [
+  { id: 'none',     en: 'just tasty',    de: 'einfach lecker',   actives: '' },
+  { id: 'sleep',    en: 'sleep support', de: 'sleep support',    actives: 'melatonin & magnesium' },
+  { id: 'immunity', en: 'immunity',      de: 'immunsystem',      actives: 'vitamin c & zinc' },
+  { id: 'energy',   en: 'energy',        de: 'energie',          actives: 'caffeine & vitamin b12' },
+  { id: 'focus',    en: 'focus',         de: 'fokus',            actives: 'l-theanine & ginkgo' },
+  { id: 'beauty',   en: 'beauty',        de: 'beauty',           actives: 'collagen & biotin' },
+  { id: 'gut',      en: 'gut health',    de: 'gut health',       actives: 'fibre & probiotics' },
+  { id: 'calm',     en: 'calm',          de: 'entspannung',      actives: 'ashwagandha & l-tryptophan' },
 ];
 
 const Chip = ({ active, onClick, children, style }) => (
@@ -1053,14 +1066,11 @@ const LaunchOverlay = ({ cfg, onClose }) => {
       }}>
         {/* left: copy */}
         <div>
-          <div style={{ color: 'var(--accent)', fontSize: 'calc(12px * var(--scale))', letterSpacing: '0.3em', marginBottom: 20, animation: 'blink 1.4s step-end infinite' }}>
-            ● idea received · #DRP-0124
-          </div>
           <h1 style={{ fontSize: 'clamp(48px, 7vw, 110px)', lineHeight: 0.9, letterSpacing: '-0.03em', marginBottom: 24 }}>
             idea<br/><span className="word-em" style={{ color: 'var(--accent)' }}>dropped.</span>
           </h1>
-          <p style={{ color: 'var(--fg-2)', fontSize: 'calc(15px * var(--scale))', lineHeight: 1.6, maxWidth: 420, marginBottom: 32 }}>
-            <strong style={{ color: 'var(--fg)' }}>{cfg.name}</strong> is in. the foodciety team reviews your drop and gets back to you within 48h. then it goes into production.
+          <p style={{ color: 'var(--fg-2)', fontSize: 'calc(15px * var(--scale))', lineHeight: 1.6, maxWidth: 460, marginBottom: 32 }}>
+            you are one of the first to create the future of food products on <strong style={{ color: 'var(--fg)' }}>foodciety</strong>. thanks for dropping your idea — our team will get back to you in the coming days to evaluate the next steps.
           </p>
           <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
             {['↗ share', '⊕ new drop'].map((t, i) => (
@@ -1099,7 +1109,9 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
     flavorDe: 'Himbeere',
     pack: 'pouch',
     color: '#7a9a3a',
-    name: 'sauer & käse',
+    name: '',
+    func: 'none',
+    funcNote: '',
     handle: 'foodcreator.hh',
     weight: 120,
     density: 9,
@@ -1113,6 +1125,8 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
         const merged = { ...INITIAL_CFG, ...JSON.parse(saved) };
         // legacy base category migrated to chocolate bars
         if (merged.base === 'bars') merged.base = 'chocolate bars';
+        // legacy demo name → empty so the placeholder shows
+        if (merged.name === 'sauer & käse') merged.name = '';
         return merged;
       }
     } catch (e) {}
@@ -1215,23 +1229,9 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
     }
   };
 
-  const [tilt, setTilt] = React.useState({ x: -16, y: 28 });
-  const dragging = React.useRef(null);
-
-  const onPointerDown = (e) => {
-    dragging.current = { x: e.clientX, y: e.clientY, tilt: { ...tilt } };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - dragging.current.x;
-    const dy = e.clientY - dragging.current.y;
-    setTilt({
-      y: dragging.current.tilt.y + dx * 0.4,
-      x: Math.max(-30, Math.min(30, dragging.current.tilt.x - dy * 0.3)),
-    });
-  };
-  const onPointerUp = () => { dragging.current = null; };
+  // Locked hero view — fixed base orientation, the 3D preview adds its
+  // own float + wiggle animation on top.
+  const tilt = { x: -9, y: 17 };
 
   const pricePer = 1.00;
   const retail = 3.49;
@@ -1249,7 +1249,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
   ];
 
   return (
-    <div className="page-pad" style={{ padding: '80px 32px 48px', maxWidth: 1440, margin: '0 auto' }}>
+    <div className="page-pad config-page" style={{ padding: '80px 32px 48px', maxWidth: 1440, margin: '0 auto' }}>
       {/* header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', paddingBottom: 20, borderBottom: '1px solid var(--line)', marginBottom: 32 }}>
         <div>
@@ -1259,10 +1259,6 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
           <h2 style={{ fontSize: 'calc(28px * var(--scale))', fontWeight: 400, letterSpacing: '-0.02em' }}>
             {lang === 'de' ? <>von der community zum produkt. in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>tagen statt monaten</span>.</> : <>from community to product. in <span className="word-em" style={{ fontSize: '1.1em', color: 'var(--accent)' }}>days, not months</span>.</>}
           </h2>
-        </div>
-        <div style={{ textAlign: 'right', fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', letterSpacing: '0.08em' }}>
-          <div>{lang === 'de' ? 'entwurf' : 'draft'} · #DRP-0124</div>
-          <div style={{ color: 'var(--fg-3)' }}>{lang === 'de' ? 'auto-gespeichert · gerade eben' : 'auto-saved · just now'}</div>
         </div>
       </div>
 
@@ -1340,6 +1336,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                 <input
                   value={cfg.name}
                   onChange={e => setCfg({ ...cfg, name: e.target.value })}
+                  placeholder={lang === 'de' ? 'your product name here' : 'your product name here'}
                   style={{
                     display: 'block',
                     width: '100%',
@@ -1500,82 +1497,130 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
 
           {step === 3 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>{lang === 'de' ? 'verpackung' : 'packaging'}</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 16 }}>
-                {PACKAGES.filter(p => p.bases.includes(cfg.base)).map(p => (
-                  <button key={p.id}
-                    onClick={() => setCfg({ ...cfg, pack: p.id })}
-                    style={{
-                      padding: '20px 12px',
-                      border: `1px solid ${cfg.pack === p.id ? 'var(--fg)' : 'var(--line)'}`,
-                      background: cfg.pack === p.id ? 'var(--bg-2)' : 'transparent',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div className="placeholder" style={{ height: 64, marginBottom: 10 }}>{p.id}</div>
-                    <div style={{ fontSize: 'calc(12px * var(--scale))' }}>{p.label}</div>
-                  </button>
-                ))}
+              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                {lang === 'de' ? 'soll dein produkt etwas können?' : 'should your product do something?'}
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginTop: 16 }}>
+                {FUNCTIONS.map(f => {
+                  const sel = (cfg.func || 'none') === f.id;
+                  return (
+                    <button key={f.id}
+                      onClick={() => setCfg({ ...cfg, func: f.id })}
+                      style={{
+                        textAlign: 'left',
+                        padding: '16px 18px',
+                        border: `1px solid ${sel ? 'var(--fg)' : 'var(--line)'}`,
+                        background: sel ? 'var(--bg-2)' : 'transparent',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        transition: 'all 140ms',
+                        minHeight: 64,
+                      }}>
+                      <div style={{ fontSize: 'calc(15px * var(--scale))', fontWeight: 700, letterSpacing: '-0.01em' }}>
+                        {lang === 'de' ? f.de : f.en}
+                      </div>
+                      <div style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', marginTop: 4 }}>
+                        {f.actives || (lang === 'de' ? 'ohne zusätze' : 'no actives')}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <div style={{ marginTop: 32 }}>
-                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>{lang === 'de' ? 'verpackungs-farbe' : 'packaging color'}</label>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {[
-                    { c: '#2f6b3f', l: 'forest' },
-                    { c: '#c85250', l: 'tomato' },
-                    { c: '#e0b53f', l: 'mustard' },
-                    { c: '#2b3a67', l: 'navy' },
-                    { c: '#16140f', l: 'ink' },
-                    { c: '#efe9dd', l: 'cream' },
-                    { c: '#b0472f', l: 'rust' },
-                    { c: '#6a4fb0', l: 'grape' },
-                  ].map(col => {
-                    const active = (cfg.packColor || '#2f6b3f') === col.c;
-                    return (
-                      <button key={col.c}
-                        onClick={() => setCfg({ ...cfg, packColor: col.c })}
-                        title={col.l}
-                        style={{
-                          width: 36, height: 36, background: col.c,
-                          border: active ? '2px solid var(--fg)' : '1px solid var(--line)',
-                          cursor: 'pointer',
-                        }} />
-                    );
-                  })}
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 4, cursor: 'pointer', fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)' }}>
-                    <input type="color" value={cfg.packColor || '#2f6b3f'}
-                      onChange={e => setCfg({ ...cfg, packColor: e.target.value })}
-                      style={{ width: 36, height: 36, padding: 0, border: '1px solid var(--line)', background: 'none', cursor: 'pointer' }} />
-                    {lang === 'de' ? 'eigene' : 'custom'}
-                  </label>
-                </div>
-              </div>
-              <div style={{ marginTop: 32 }}>
-                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>{lang === 'de' ? 'füllmenge' : 'fill weight'} · {cfg.weight}g</label>
-                <input type="range" min={40} max={300} step={10} value={cfg.weight}
-                  onChange={e => setCfg({ ...cfg, weight: +e.target.value })}
-                  style={{ width: '100%', marginTop: 10, accentColor: 'var(--accent)' }}
-                />
+
+              <div style={{ marginTop: 28 }}>
+                <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                  {lang === 'de' ? 'oder beschreib es selbst' : 'or describe it yourself'}
+                </label>
+                <textarea
+                  value={cfg.funcNote || ''}
+                  onChange={e => setCfg({ ...cfg, funcNote: e.target.value })}
+                  rows={4}
+                  placeholder={lang === 'de'
+                    ? 'z.b. „fokus-gummies für gamer mit koffein und l-theanin, ohne zucker …"'
+                    : 'e.g. "focus gummies for gamers with caffeine and l-theanine, sugar-free …"'}
+                  style={{
+                    width: '100%', marginTop: 10, padding: '12px 14px',
+                    background: 'var(--bg-2)', border: '1px solid var(--line)',
+                    color: 'var(--fg)', fontFamily: 'inherit',
+                    fontSize: 'calc(13px * var(--scale))', lineHeight: 1.55,
+                    resize: 'vertical', textTransform: 'lowercase',
+                  }} />
               </div>
             </div>
           )}
 
           {step === 4 && (
             <div>
-              <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>branding</label>
-              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>{lang === 'de' ? 'produkt-name' : 'product name'}</div>
                   <input value={cfg.name}
                     onChange={e => setCfg({ ...cfg, name: e.target.value })}
+                    placeholder="your product name here"
                     style={{
                       width: '100%', padding: '12px 14px',
                       background: 'var(--bg-2)', border: '1px solid var(--line)',
                       color: 'var(--fg)', fontFamily: 'inherit', fontSize: 'calc(15px * var(--scale))',
                       textTransform: 'lowercase',
                     }} />
+                </div>
+
+                {/* packaging — compact type + color, folded into branding */}
+                <div>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'verpackung' : 'packaging'}</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {PACKAGES.filter(p => p.bases.includes(cfg.base)).map(p => (
+                      <button key={p.id}
+                        onClick={() => setCfg({ ...cfg, pack: p.id })}
+                        style={{
+                          padding: '10px 16px', minHeight: 40,
+                          border: `1px solid ${cfg.pack === p.id ? 'var(--fg)' : 'var(--line)'}`,
+                          background: cfg.pack === p.id ? 'var(--bg-2)' : 'transparent',
+                          color: 'inherit', cursor: 'pointer',
+                          fontSize: 'calc(12px * var(--scale))',
+                        }}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {[
+                      { c: '#2f6b3f', l: 'forest' },
+                      { c: '#c85250', l: 'tomato' },
+                      { c: '#e0b53f', l: 'mustard' },
+                      { c: '#2b3a67', l: 'navy' },
+                      { c: '#16140f', l: 'ink' },
+                      { c: '#efe9dd', l: 'cream' },
+                      { c: '#b0472f', l: 'rust' },
+                      { c: '#6a4fb0', l: 'grape' },
+                    ].map(col => {
+                      const active = (cfg.packColor || '#2f6b3f') === col.c;
+                      return (
+                        <button key={col.c}
+                          onClick={() => setCfg({ ...cfg, packColor: col.c })}
+                          title={col.l}
+                          style={{
+                            width: 36, height: 36, background: col.c,
+                            border: active ? '2px solid var(--fg)' : '1px solid var(--line)',
+                            cursor: 'pointer',
+                          }} />
+                      );
+                    })}
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 4, cursor: 'pointer', fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)' }}>
+                      <input type="color" value={cfg.packColor || '#2f6b3f'}
+                        onChange={e => setCfg({ ...cfg, packColor: e.target.value })}
+                        style={{ width: 36, height: 36, padding: 0, border: '1px solid var(--line)', background: 'none', cursor: 'pointer' }} />
+                      {lang === 'de' ? 'eigene' : 'custom'}
+                    </label>
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', letterSpacing: '0.1em' }}>
+                      {lang === 'de' ? 'füllmenge' : 'fill weight'} · {cfg.weight}g
+                    </div>
+                    <input type="range" min={40} max={300} step={10} value={cfg.weight}
+                      onChange={e => setCfg({ ...cfg, weight: +e.target.value })}
+                      style={{ width: '100%', marginTop: 8, accentColor: 'var(--accent)' }} />
+                  </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 6 }}>creator handle</div>
@@ -1724,22 +1769,27 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
 
                 <div>
                   <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'typo-stil' : 'type style'}</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))', gap: 8 }}>
                     {[
-                      ['editorial', 'editorial'],
-                      ['mono', 'mono bold'],
-                      ['clean', 'mono clean'],
-                    ].map(([val, lbl]) => (
+                      ['editorial', 'editorial', 'italic 15px Georgia, serif'],
+                      ['serif', 'serif', '600 14px Georgia, serif'],
+                      ['mono', 'mono bold', '700 13px monospace'],
+                      ['clean', 'mono clean', '400 13px monospace'],
+                      ['display', 'display', '900 13px "Arial Black", sans-serif'],
+                      ['condensed', 'condensed', '700 14px "Arial Narrow", sans-serif'],
+                      ['script', 'script', 'italic 700 16px "Snell Roundhand", cursive'],
+                    ].map(([val, lbl, previewFont]) => (
                       <button key={val}
                         onClick={() => setCfg({ ...cfg, typoStyle: val })}
                         style={{
-                          flex: 1, minWidth: 90, padding: '12px 10px',
+                          padding: '12px 10px',
                           border: `1px solid ${(cfg.typoStyle || 'editorial') === val ? 'var(--fg)' : 'var(--line)'}`,
                           background: (cfg.typoStyle || 'editorial') === val ? 'var(--bg-2)' : 'transparent',
                           color: 'inherit', cursor: 'pointer',
-                          fontSize: 'calc(11px * var(--scale))', minHeight: 44,
+                          minHeight: 56, textAlign: 'left',
                         }}>
-                        {lbl}
+                        <div style={{ font: previewFont, lineHeight: 1.1 }}>Aa</div>
+                        <div style={{ fontSize: 'calc(10px * var(--scale))', color: 'var(--fg-3)', marginTop: 4 }}>{lbl}</div>
                       </button>
                     ))}
                   </div>
@@ -1812,23 +1862,31 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
 
               {/* summary of the concept */}
               <div style={{ marginTop: 16, border: '1px solid var(--line)' }}>
-                {[
-                  [lang === 'de' ? 'konzept' : 'concept', cfg.name || '·'],
-                  [lang === 'de' ? 'kategorie' : 'category', cfg.base],
-                  [lang === 'de' ? 'form' : 'shape', cfg.shapeName || '·'],
-                  [lang === 'de' ? 'geschmack' : 'flavor', (lang === 'de' ? cfg.flavorDe : cfg.flavor) || '·'],
-                  [lang === 'de' ? 'verpackung' : 'packaging', cfg.pack],
-                  ['creator', '@' + (cfg.handle || '·')],
-                ].map(([k, v], i) => (
-                  <div key={i} style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    padding: '11px 16px',
-                    borderBottom: i < 5 ? '1px solid var(--line)' : 'none',
-                  }}>
-                    <span style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.08em' }}>{k}</span>
-                    <span style={{ fontSize: 'calc(12px * var(--scale))', fontWeight: 600 }}>{v}</span>
-                  </div>
-                ))}
+                {(() => {
+                  const fn = FUNCTIONS.find(f => f.id === (cfg.func || 'none')) || FUNCTIONS[0];
+                  const fnLabel = cfg.funcNote
+                    ? (lang === 'de' ? 'eigene idee' : 'custom idea')
+                    : (lang === 'de' ? fn.de : fn.en) + (fn.actives ? ` (${fn.actives})` : '');
+                  const rows = [
+                    [lang === 'de' ? 'konzept' : 'concept', cfg.name || '·'],
+                    [lang === 'de' ? 'kategorie' : 'category', cfg.base],
+                    [lang === 'de' ? 'form' : 'shape', cfg.shapeName || '·'],
+                    [lang === 'de' ? 'geschmack' : 'flavor', (lang === 'de' ? cfg.flavorDe : cfg.flavor) || '·'],
+                    [lang === 'de' ? 'funktion' : 'function', fnLabel],
+                    [lang === 'de' ? 'verpackung' : 'packaging', cfg.pack],
+                    ['creator', '@' + (cfg.handle || '·')],
+                  ];
+                  return rows.map(([k, v], i) => (
+                    <div key={i} style={{
+                      display: 'flex', justifyContent: 'space-between', gap: 16,
+                      padding: '11px 16px',
+                      borderBottom: i < rows.length - 1 ? '1px solid var(--line)' : 'none',
+                    }}>
+                      <span style={{ color: 'var(--fg-3)', fontSize: 'calc(11px * var(--scale))', letterSpacing: '0.08em', flexShrink: 0 }}>{k}</span>
+                      <span style={{ fontSize: 'calc(12px * var(--scale))', fontWeight: 600, textAlign: 'right' }}>{v}</span>
+                    </div>
+                  ));
+                })()}
               </div>
 
               {/* contact + message */}
@@ -1877,7 +1935,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                 → drop the idea
               </button>
               <div style={{ textAlign: 'center', marginTop: 12, color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em' }}>
-                {lang === 'de' ? 'wir melden uns innerhalb von 48h' : 'we hit you back within 48h'}
+                {lang === 'de' ? 'unser team meldet sich in den nächsten tagen' : 'our team gets back to you in the coming days'}
               </div>
             </div>
           )}
@@ -1912,34 +1970,13 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
           </div>
         </div>
 
-        {/* RIGHT: preview */}
+        {/* RIGHT: preview — locked hero view; candy pieces appear from the
+            shape step onward */}
         <div className="mobile-preview-first">
           <div className="m-preview-sticky" style={{
             position: 'sticky', top: 80,
           }}>
-            <ThreeProductPreview cfg={cfg} tilt={tilt} onTiltChange={setTilt} />
-            <div style={{
-              marginTop: 16,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 12,
-              fontSize: 'calc(10px * var(--scale))',
-              color: 'var(--fg-3)',
-              letterSpacing: '0.1em',
-            }}>
-              <div>
-                <div style={{ color: 'var(--fg-2)' }}>shape</div>
-                <div style={{ color: 'var(--fg)', marginTop: 4 }}>{cfg.shape}</div>
-              </div>
-              <div>
-                <div style={{ color: 'var(--fg-2)' }}>flavor</div>
-                <div style={{ color: 'var(--fg)', marginTop: 4 }}>{cfg.flavor}</div>
-              </div>
-              <div>
-                <div style={{ color: 'var(--fg-2)' }}>pack</div>
-                <div style={{ color: 'var(--fg)', marginTop: 4 }}>{cfg.pack}</div>
-              </div>
-            </div>
+            <ThreeProductPreview cfg={cfg} tilt={tilt} showPieces={step >= 1} />
           </div>
         </div>
       </div>

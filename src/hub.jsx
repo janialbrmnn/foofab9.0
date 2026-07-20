@@ -45,11 +45,6 @@ const HubCard = ({ idx, kw, title, sub, onClick, slot, slotLabel, openLabel }) =
     onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-2)'; e.currentTarget.style.borderColor = 'var(--fg-3)'; }}
     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--line)'; }}
   >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', color: 'var(--fg-3)' }}>
-      <span style={{ whiteSpace: 'nowrap' }}>[ 0{idx} / {kw} ]</span>
-      <Arrow dir="up" size={12} />
-    </div>
-
     {/* section image */}
     <ImgSlot slot={slot} label={slotLabel} group="hub" style={{ height: '200px', flexShrink: 0 }}>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

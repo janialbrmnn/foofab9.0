@@ -386,8 +386,24 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     h1 { font-size: clamp(38px, 11vw, 72px) !important; line-height: 1.02 !important; }
     h2 { font-size: clamp(26px, 6.5vw, 40px) !important; line-height: 1.1 !important; }
     h3 { font-size: clamp(22px, 5.5vw, 32px) !important; line-height: 1.15 !important; }
-  .mobile-preview-first { order: -1 !important; margin-bottom: 32px; }
-  .mobile-preview-first .m-preview-sticky { position: static !important; }
+  /* Configurator: the product preview stays PINNED at the top while the
+     options scroll underneath (Porsche-configurator pattern). The page
+     gets padding equal to the preview height; the in-grid slot collapses. */
+  .config-page { padding-top: calc(36vh + 72px) !important; }
+  .mobile-preview-first { order: -1 !important; margin: 0 !important; height: 0; overflow: visible; }
+  .mobile-preview-first .m-preview-sticky {
+    position: fixed !important;
+    top: 48px !important;
+    left: 14px !important;
+    right: 14px !important;
+    height: 36vh !important;
+    z-index: 40;
+  }
+  .m-preview-sticky .pv3d {
+    aspect-ratio: auto !important;
+    height: 100% !important;
+    box-shadow: 0 14px 34px rgba(22, 20, 15, 0.16);
+  }
 
   /* Configurator: more breathing room between stepper and content */
   .mobile-stepper { margin-bottom: 28px !important; }

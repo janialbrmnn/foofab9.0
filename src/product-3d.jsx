@@ -962,24 +962,42 @@ const linCol = (col) => (col.isColor ? col.clone() : new THREE.Color(col)).conve
 const makeGummyMaterial = (col, opts = {}) => {
   const cLin = linCol(col);
   const base = cLin.clone().multiplyScalar(0.85);
+  // Candy-glass look: low roughness + strong clearcoat + a touch of
+  // transmission so pieces read wet-glossy like real gummies.
   const mat = new THREE.MeshPhysicalMaterial({
     color: base,
-    roughness: 0.3,
+    roughness: 0.12,
     metalness: 0,
-    transmission: opts.transmission ?? 0.08,
+    transmission: opts.transmission ?? 0.16,
     transparent: true,
     opacity: 1,
     ior: 1.42,
     thickness: opts.thickness ?? 0.7,
-    clearcoat: 0.5,
-    clearcoatRoughness: 0.14,
+    clearcoat: 0.9,
+    clearcoatRoughness: 0.06,
     attenuationColor: cLin,
     attenuationDistance: 0.45,
     emissive: cLin,
-    emissiveIntensity: opts.emissive ?? 0.04,
+    emissiveIntensity: opts.emissive ?? 0.05,
   });
-  mat.envMapIntensity = 0.25;
+  mat.envMapIntensity = 0.55;
   return mat;
+};
+
+// Shared title typefaces — one map for every printed surface so the
+// typo-style picker behaves identically on label, film and bar wrap.
+// System stacks keep this working without extra font loads.
+const titleFontFor = (typoStyle, size) => {
+  const fonts = {
+    editorial: `italic ${size}px "Kreol Standard", "Georgia", serif`,
+    serif:     `600 ${size}px "Georgia", "Times New Roman", serif`,
+    mono:      `700 ${Math.round(size * 0.92)}px "Neue Rational Mono", monospace`,
+    clean:     `400 ${Math.round(size * 0.92)}px "Neue Rational Mono", monospace`,
+    display:   `900 ${Math.round(size * 0.95)}px "Arial Black", "Impact", sans-serif`,
+    condensed: `700 ${Math.round(size * 0.98)}px "Arial Narrow", "Helvetica Neue", sans-serif`,
+    script:    `italic 700 ${size}px "Snell Roundhand", "Brush Script MT", cursive`,
+  };
+  return fonts[typoStyle] || fonts.editorial;
 };
 
 // ───────────────────────────────────────────────────────────────────
@@ -1000,7 +1018,7 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
   const ctx = canvas.getContext('2d');
 
   const accent = cfg?.color || '#c85250';
-  const name = (cfg?.name || 'foofab drop').toLowerCase();
+  const name = (cfg?.name || 'your product name here').toLowerCase();
   const handle = '@' + (cfg?.handle || 'foodcreator');
   // When an AI background is in play, this canvas is the TYPO LAYER ONLY:
   // transparent base + a soft legibility scrim so text stays readable on
@@ -1085,12 +1103,7 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
   // typoStyle controls the title typeface independently of the background.
   ctx.fillStyle = typoColor;
   const titleSize = Math.round(base * 0.22);
-  const titleFonts = {
-    editorial: `italic ${titleSize}px "Kreol Standard", "Georgia", serif`,
-    mono:      `700 ${Math.round(titleSize * 0.92)}px "Neue Rational Mono", monospace`,
-    clean:     `400 ${Math.round(titleSize * 0.92)}px "Neue Rational Mono", monospace`,
-  };
-  ctx.font = titleFonts[typoStyle] || titleFonts.editorial;
+  ctx.font = titleFontFor(typoStyle, titleSize);
   const maxW = w - pad * 2;
   const words = name.split(' ');
   const lines = [];
@@ -1197,7 +1210,7 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
   const packColor = cfg?.packColor || '#2f6b3f';
   const lightFilm = relLuminance(packColor) > 0.55;
   const ink = cfg?.typoColor || (lightFilm ? '#16140f' : '#f6f3ec');
-  const name = (cfg?.name || 'foofab drop');
+  const name = (cfg?.name || 'your product name here');
   const handle = '@' + (cfg?.handle || 'foodcreator');
   const pad = Math.round(w * 0.075);
 
@@ -1238,6 +1251,20 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
     ctx.fillRect(0, 0, w, h);
   }
 
+  // User-controlled overlay BETWEEN background and type (tone + opacity) —
+  // same behavior as the paper label, so the branding control works on
+  // the doypack film print too.
+  {
+    const ovTone = (cfg && cfg.overlayTone) || 'none';
+    const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
+    if (ovTone !== 'none' && ovOp > 0) {
+      ctx.fillStyle = ovTone === 'dark'
+        ? `rgba(22,20,15,${ovOp})`
+        : `rgba(246,243,236,${ovOp})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
   // Brand row — logo (knocked out to ink color) or FOOFAB wordmark
   const logoImg = cfg && cfg._logoImage;
   const brandY = Math.round(h * 0.055);
@@ -1270,16 +1297,23 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
   ctx.textAlign = 'left';
   ctx.globalAlpha = 1;
 
-  // Big stacked title — WTG-style chunky uppercase block
+  // Big stacked title — WTG-style chunky uppercase block.
+  // The typo-style picker switches the typeface here too; the mono
+  // default keeps the original WTG look.
+  const filmStyle = (cfg && cfg.typoStyle) || 'mono';
+  const filmFont = (s) => filmStyle === 'mono' || filmStyle === 'clean'
+    ? `800 ${s}px "Neue Rational Mono", "Arial Black", monospace`
+    : titleFontFor(filmStyle, s);
   const title = name.toUpperCase();
   const maxW = w - pad * 2;
   let size = Math.round(w * 0.17);
   ctx.textBaseline = 'alphabetic';
   const measure = (t, s) => {
-    ctx.font = `800 ${s}px "Neue Rational Mono", "Arial Black", monospace`;
+    ctx.font = filmFont(s);
     return ctx.measureText(t).width;
   };
-  // wrap words; shrink until it fits in ~4 lines
+  // wrap words; shrink until it fits in ~4 lines AND inside the title
+  // zone (so long names never collide with the bottom block)
   let lines = [];
   for (; size > w * 0.07; size -= 4) {
     lines = [];
@@ -1290,9 +1324,11 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
       else cur = test;
     }
     if (cur) lines.push(cur);
-    if (lines.length <= 4 && lines.every(l => measure(l, size) <= maxW)) break;
+    if (lines.length <= 4 &&
+        lines.every(l => measure(l, size) <= maxW) &&
+        lines.length * size * 1.04 <= h * 0.46) break;
   }
-  ctx.font = `800 ${size}px "Neue Rational Mono", "Arial Black", monospace`;
+  ctx.font = filmFont(size);
   ctx.fillStyle = ink;
   const lineH = size * 1.04;
   let ty = Math.round(h * 0.155) + size;
@@ -1668,10 +1704,13 @@ const buildJar = (cfg) => {
     P(neckR, bodyH / 2 - 0.1),
     P(neckR, bodyH / 2),                 // neck
   ];
-  // Pieces float INSIDE the glass (gummies or nuts, depending on base)
-  const fill = makeJarFill(cfg, bodyR * 0.66, bodyH * 0.36);
-  fill.position.y = -bodyH * 0.04;
-  group.add(fill);
+  // Pieces float INSIDE the glass (gummies or nuts, depending on base).
+  // Hidden until the shape step — cfg._pieces gates all candy pieces.
+  if (cfg._pieces !== false) {
+    const fill = makeJarFill(cfg, bodyR * 0.66, bodyH * 0.36);
+    fill.position.y = -bodyH * 0.04;
+    group.add(fill);
+  }
 
   const bodyGeo = new THREE.LatheGeometry(profile, 72);
   const glassMat = new THREE.MeshPhysicalMaterial({
@@ -1889,6 +1928,17 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
     ctx.fillStyle = packColor;
     ctx.fillRect(0, 0, w, h);
   }
+  // user overlay between background and type — matches label + film
+  {
+    const ovTone = (cfg && cfg.overlayTone) || 'none';
+    const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
+    if (ovTone !== 'none' && ovOp > 0) {
+      ctx.fillStyle = ovTone === 'dark'
+        ? `rgba(22,20,15,${ovOp})`
+        : `rgba(246,243,236,${ovOp})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
   // soft horizontal sheen so the foil doesn't look flat
   const sheen = ctx.createLinearGradient(0, 0, 0, h);
   sheen.addColorStop(0, 'rgba(255,255,255,0.10)');
@@ -1907,10 +1957,14 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
   ctx.globalAlpha = 1;
 
   // huge centered wordmark — auto-shrink to one or two lines
-  const title = (cfg?.name || 'foofab').toUpperCase();
+  const barStyle = (cfg && cfg.typoStyle) || 'mono';
+  const barFont = (s) => barStyle === 'mono' || barStyle === 'clean'
+    ? `800 ${s}px "Neue Rational Mono", "Arial Black", monospace`
+    : titleFontFor(barStyle, s);
+  const title = (cfg?.name || 'your product name here').toUpperCase();
   let size = Math.round(h * 0.34);
   const fits = (t, s) => {
-    ctx.font = `800 ${s}px "Neue Rational Mono", "Arial Black", monospace`;
+    ctx.font = barFont(s);
     return ctx.measureText(t).width <= w - pad * 2;
   };
   let lines = [title];
@@ -1930,7 +1984,7 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
       while (size > h * 0.1 && !lines.every(l => fits(l, size))) size -= 4;
     }
   }
-  ctx.font = `800 ${size}px "Neue Rational Mono", "Arial Black", monospace`;
+  ctx.font = barFont(size);
   ctx.fillStyle = ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -2319,15 +2373,59 @@ const BUILDERS = {
   calendar: buildCalendar,
 };
 
-const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
+// ───────────────────────────────────────────────────────────────────
+// Sparkle sprites — white four-point stars with a soft glow, floating
+// around the product like supplement-hero renders. One cached texture
+// shared by all sprites (never disposed on rebuild).
+// ───────────────────────────────────────────────────────────────────
+let __sparkleTex = null;
+const makeSparkleTexture = () => {
+  if (__sparkleTex) return __sparkleTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.translate(64, 64);
+  const g = x.createRadialGradient(0, 0, 0, 0, 0, 60);
+  g.addColorStop(0, 'rgba(255,255,255,0.5)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.10)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g;
+  x.beginPath(); x.arc(0, 0, 60, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#ffffff';
+  x.beginPath();
+  x.moveTo(0, -56);
+  x.quadraticCurveTo(5, -9, 56, 0);
+  x.quadraticCurveTo(5, 9, 0, 56);
+  x.quadraticCurveTo(-5, 9, -56, 0);
+  x.quadraticCurveTo(-5, -9, 0, -56);
+  x.closePath(); x.fill();
+  __sparkleTex = new THREE.CanvasTexture(c);
+  if (THREE.sRGBEncoding) __sparkleTex.encoding = THREE.sRGBEncoding;
+  return __sparkleTex;
+};
+
+const SPARKLE_SPOTS = [
+  { x: -2.35, y: 2.0,  z: -0.4, s: 0.42 },
+  { x: 2.6,  y: 1.7,  z: 0.3,  s: 0.55 },
+  { x: -2.9, y: 0.2,  z: 0.6,  s: 0.3 },
+  { x: 2.95, y: -0.7, z: -0.5, s: 0.34 },
+  { x: -1.8, y: -1.9, z: 0.8,  s: 0.46 },
+  { x: 1.3,  y: 2.5,  z: -0.8, s: 0.3 },
+  { x: 0.4,  y: -2.4, z: 0.5,  s: 0.26 },
+  { x: -0.9, y: 2.7,  z: 0.4,  s: 0.24 },
+  { x: 2.1,  y: 0.6,  z: 1.0,  s: 0.2 },
+];
+
+const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => {
   const mountRef = React.useRef(null);
   const sceneRef = React.useRef(null);
   const rendererRef = React.useRef(null);
   const cameraRef = React.useRef(null);
   const objectRef = React.useRef(null);
-  const dragRef = React.useRef(null);
   const tiltRef = React.useRef(tilt);
   tiltRef.current = tilt;
+  // Flavor-tinted stage color — the whole backdrop follows the flavor
+  const flavorHex = gummyColorFor(cfg);
 
   // Setup scene once
   React.useEffect(() => {
@@ -2338,21 +2436,8 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
     const height = mount.clientHeight;
 
     const scene = new THREE.Scene();
-    // Realistic soft studio background — vertical seamless sweep
-    (() => {
-      const bc = document.createElement('canvas');
-      bc.width = 16; bc.height = 512;
-      const bx = bc.getContext('2d');
-      const bg = bx.createLinearGradient(0, 0, 0, 512);
-      bg.addColorStop(0, '#eceae5');   // upper wall
-      bg.addColorStop(0.55, '#e3e0d9');
-      bg.addColorStop(0.72, '#d3cfc6'); // floor horizon
-      bg.addColorStop(1, '#c2beb4');    // near floor
-      bx.fillStyle = bg; bx.fillRect(0, 0, 16, 512);
-      const bgTex = new THREE.CanvasTexture(bc);
-      if (THREE.sRGBEncoding) bgTex.encoding = THREE.sRGBEncoding;
-      scene.background = bgTex;
-    })();
+    // Neutral until the flavor effect paints the real backdrop
+    scene.background = new THREE.Color('#f2efe8');
 
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
     camera.position.set(0, 0, 9);
@@ -2424,9 +2509,11 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
       envTex.dispose();
     } catch (e) { /* env optional */ }
 
+    // Shadow-only ground — the flavor backdrop stays a clean color field
+    // (no floor horizon), the product still casts a soft grounding shadow.
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(40, 40),
-      new THREE.MeshStandardMaterial({ color: 0xd8d4cb, roughness: 0.95, metalness: 0 })
+      new THREE.ShadowMaterial({ opacity: 0.16 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -2.3;
@@ -2439,16 +2526,25 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
 
     let raf;
     const tick = () => {
-      if (objectRef.current) {
-        const t = tiltRef.current;
-        objectRef.current.rotation.y = (t.y * Math.PI) / 180;
-        objectRef.current.rotation.x = (t.x * Math.PI) / 180;
-        // gentle floating drift for the gummy pieces
+      const obj = objectRef.current;
+      if (obj) {
+        // Locked hero view: the product hovers and wiggles gently around
+        // its base orientation — no user rotation.
+        const t = tiltRef.current || { x: -8, y: 16 };
         const now = performance.now() / 1000;
-        objectRef.current.traverse((c) => {
+        const wigY = Math.sin(now * 0.45) * 3.0 + Math.sin(now * 0.21) * 1.6;
+        const wigX = Math.sin(now * 0.34) * 1.4;
+        obj.rotation.y = ((t.y + wigY) * Math.PI) / 180;
+        obj.rotation.x = ((t.x + wigX) * Math.PI) / 180;
+        obj.position.y = Math.sin(now * 0.8) * 0.09;
+        obj.traverse((c) => {
           const u = c.userData;
           if (u && u.floatAmp) {
             c.position.y = u.baseY + Math.sin(now * u.floatSpeed + u.floatPhase) * u.floatAmp;
+          }
+          if (u && u.twinkle) {
+            const s = u.baseS * (0.8 + 0.35 * Math.sin(now * u.twSpeed + u.twPhase));
+            c.scale.set(s, s, 1);
           }
         });
       }
@@ -2477,6 +2573,31 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
     };
   }, []);
 
+  // Flavor backdrop — a soft pastel of the candy color (Lemme-style):
+  // lighter at the top, a touch deeper at the bottom.
+  React.useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const c = new THREE.Color(flavorHex);
+    const white = new THREE.Color('#ffffff');
+    const top = c.clone().lerp(white, 0.82);
+    const mid = c.clone().lerp(white, 0.72);
+    const bot = c.clone().lerp(white, 0.55);
+    const bc = document.createElement('canvas');
+    bc.width = 16; bc.height = 512;
+    const bx = bc.getContext('2d');
+    const g = bx.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, '#' + top.getHexString());
+    g.addColorStop(0.55, '#' + mid.getHexString());
+    g.addColorStop(1, '#' + bot.getHexString());
+    bx.fillStyle = g; bx.fillRect(0, 0, 16, 512);
+    const bgTex = new THREE.CanvasTexture(bc);
+    if (THREE.sRGBEncoding) bgTex.encoding = THREE.sRGBEncoding;
+    const old = scene.background;
+    scene.background = bgTex;
+    if (old && old.dispose) old.dispose();
+  }, [flavorHex]);
+
   // Build / rebuild the product whenever cfg changes.
   // Rebuilding is cheap with primitives — no async loading.
   React.useEffect(() => {
@@ -2492,6 +2613,9 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
             c.geometry?.dispose();
             const mats = Array.isArray(c.material) ? c.material : [c.material];
             mats.forEach(m => { m?.map?.dispose(); m?.dispose(); });
+          } else if (c.isSprite) {
+            // dispose the material but NOT the shared sparkle texture
+            c.material?.dispose();
           }
         });
         objectRef.current = null;
@@ -2502,16 +2626,19 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
       if (cancelled) return;
       disposePrev();
       const builder = BUILDERS[cfg.pack] || BUILDERS.pouch;
-      const obj = builder({ ...cfg, _bgImage: bgImage, _logoImage: logoImage });
+      const obj = builder({ ...cfg, _bgImage: bgImage, _logoImage: logoImage, _pieces: showPieces });
       obj.traverse((c) => {
         if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
       });
+      // slight hero lean, like a propped-up pack shot
+      obj.rotation.z = -0.055;
 
       // Pieces floating AROUND the package — style depends on the base:
       // gummies for candy bases, matte nuts for the nuts base, nothing
       // for chocolate bars. For the jar the pieces live INSIDE instead.
+      // All candy pieces stay hidden until the shape step (showPieces).
       const floaterStyle = floaterStyleFor(cfg);
-      if (floaterStyle !== 'none' && cfg.pack !== 'jar') {
+      if (showPieces && floaterStyle !== 'none' && cfg.pack !== 'jar') {
         const isNuts = floaterStyle === 'nuts';
         const kind = isNuts ? null : gummyKindFor(cfg);
         const geo = isNuts ? null : makeGummyGeometry(kind, 'high');
@@ -2545,6 +2672,23 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
         });
       }
 
+      // Sparkle stars around the product — always on, they sell the
+      // supplement-hero look even before pieces appear.
+      const sparkTex = makeSparkleTexture();
+      SPARKLE_SPOTS.forEach((p, i) => {
+        const mat = new THREE.SpriteMaterial({
+          map: sparkTex, transparent: true, depthWrite: false, opacity: 0.95,
+        });
+        const sp = new THREE.Sprite(mat);
+        sp.position.set(p.x, p.y, p.z);
+        sp.scale.set(p.s, p.s, 1);
+        sp.userData.twinkle = true;
+        sp.userData.baseS = p.s;
+        sp.userData.twSpeed = 0.9 + (i % 4) * 0.35;
+        sp.userData.twPhase = i * 1.3;
+        obj.add(sp);
+      });
+
       scene.add(obj);
       objectRef.current = obj;
     };
@@ -2563,100 +2707,22 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange }) => {
       .then(([bg, logo, shape]) => build(bg, logo, shape));
 
     return () => { cancelled = true; };
-  }, [cfg.pack, cfg.base, cfg.color, cfg.packColor, cfg.name, cfg.handle, cfg.flavor, cfg.flavorDe, cfg.shapeId, cfg.shapeName, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity, cfg.shapeImg]);
+  }, [cfg.pack, cfg.base, cfg.color, cfg.packColor, cfg.name, cfg.handle, cfg.flavor, cfg.flavorDe, cfg.shapeId, cfg.shapeName, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity, cfg.shapeImg, showPieces]);
 
-  // Pointer drag → rotate
-  const onPointerDown = (e) => {
-    dragRef.current = { x: e.clientX, y: e.clientY, tilt: { ...tiltRef.current } };
-    e.currentTarget.setPointerCapture(e.pointerId);
-    e.currentTarget.style.cursor = 'grabbing';
-  };
-  const onPointerMove = (e) => {
-    if (!dragRef.current) return;
-    // Prevent the page from scrolling/selecting during drag
-    if (e.cancelable) e.preventDefault();
-    const dx = e.clientX - dragRef.current.x;
-    const dy = e.clientY - dragRef.current.y;
-    // Higher sensitivity on touch devices (smaller screens = less finger travel)
-    const isTouch = e.pointerType === 'touch';
-    const sx = isTouch ? 0.9 : 0.5;
-    const sy = isTouch ? 0.7 : 0.4;
-    onTiltChange({
-      y: dragRef.current.tilt.y + dx * sx,
-      x: Math.max(-60, Math.min(60, dragRef.current.tilt.x - dy * sy)),
-    });
-  };
-  const onPointerUp = (e) => {
-    dragRef.current = null;
-    if (e?.currentTarget) e.currentTarget.style.cursor = 'grab';
-  };
-
+  // Locked hero view — no drag, no HUD. Just the floating product on a
+  // flavor-tinted stage.
   return (
-    <div style={{
+    <div className="pv3d" style={{
       width: '100%',
       aspectRatio: '1 / 1.15',
       position: 'relative',
-      background: 'linear-gradient(160deg, var(--bg-2) 0%, var(--bg) 60%, var(--bg-2) 100%)',
+      background: `color-mix(in srgb, ${flavorHex} 24%, #ffffff)`,
       border: '1px solid var(--line)',
       overflow: 'hidden',
-      cursor: 'grab',
-      touchAction: 'none',
       WebkitUserSelect: 'none',
       userSelect: 'none',
-    }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.22, pointerEvents: 'none' }}>
-        <defs>
-          <pattern id="dots-3d" width="28" height="28" patternUnits="userSpaceOnUse">
-            <circle cx="14" cy="14" r="0.6" fill="var(--fg-3)" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#dots-3d)" />
-      </svg>
-
+    }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
-
-      <div style={{
-        position: 'absolute',
-        top: 12, left: 12,
-        fontSize: 'calc(9px * var(--scale))',
-        color: 'var(--fg-3)',
-        letterSpacing: '0.15em',
-        pointerEvents: 'none',
-      }}>
-        preview · live · {cfg.pack}
-      </div>
-      <div style={{
-        position: 'absolute',
-        top: 12, right: 12,
-        fontSize: 'calc(9px * var(--scale))',
-        color: 'var(--fg-3)',
-        letterSpacing: '0.15em',
-        display: 'flex', alignItems: 'center', gap: 6,
-        pointerEvents: 'none',
-      }}>
-        <span style={{
-          display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-          background: 'var(--accent)',
-        }} />
-        rendering
-      </div>
-      <div style={{
-        position: 'absolute',
-        bottom: 12, left: 12, right: 12,
-        fontSize: 'calc(9px * var(--scale))',
-        color: 'var(--fg-3)',
-        letterSpacing: '0.1em',
-        display: 'flex', justifyContent: 'space-between',
-        pointerEvents: 'none',
-      }}>
-        <span>rot y: {tilt.y.toFixed(0)}° · x: {tilt.x.toFixed(0)}°</span>
-        <span>drag to rotate</span>
-      </div>
     </div>
   );
 };
