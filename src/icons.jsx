@@ -97,11 +97,11 @@ const BackKicker = ({ lang = 'en', onClick, style = {} }) => (
   <button
     onClick={onClick}
     style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: 0, minHeight: 0,
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      padding: '8px 2px', minHeight: 0,
       color: 'var(--fg-3)',
-      fontSize: 'calc(11px * var(--scale))',
-      letterSpacing: '0.2em',
+      fontSize: 'calc(12px * var(--scale))',
+      letterSpacing: '0.18em',
       cursor: 'pointer',
       transition: 'color 140ms',
       ...style,
@@ -109,7 +109,7 @@ const BackKicker = ({ lang = 'en', onClick, style = {} }) => (
     onMouseEnter={e => { e.currentTarget.style.color = 'var(--fg)'; }}
     onMouseLeave={e => { e.currentTarget.style.color = 'var(--fg-3)'; }}
   >
-    [ ← {lang === 'de' ? 'zurück' : 'back'} ]
+    ← {lang === 'de' ? 'zurück' : 'back'}
   </button>
 );
 

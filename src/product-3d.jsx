@@ -2354,20 +2354,39 @@ const buildCalendar = (cfg) => {
   const baseC = new THREE.Color(packColor).lerp(new THREE.Color('#0d0c0a'), 0.78);
   ctx.fillStyle = '#' + baseC.getHexString();
   ctx.fillRect(0, 0, W, H);
-  // diagonal accent light streaks
-  ctx.save();
-  ctx.translate(W * 0.62, 0);
-  ctx.rotate(0.5);
-  const streak = ctx.createLinearGradient(0, 0, W * 0.55, 0);
-  streak.addColorStop(0, 'rgba(0,0,0,0)');
-  streak.addColorStop(0.5, accent + '');
-  streak.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.globalAlpha = 0.14;
-  ctx.fillStyle = streak;
-  ctx.fillRect(-W * 0.1, -H * 0.2, W * 0.55, H * 1.6);
-  ctx.globalAlpha = 0.08;
-  ctx.fillRect(W * 0.35, -H * 0.2, W * 0.3, H * 1.6);
-  ctx.restore();
+  if (cfg && cfg._bgImage) {
+    // AI visual / uploaded photo as the full-front cover artwork,
+    // darkened enough that doors and type stay readable
+    const img = cfg._bgImage;
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const ar = iw / ih, tar = W / H;
+    let dw = W, dh = H, dx = 0, dy = 0;
+    if (ar > tar) { dw = H * ar; dx = (W - dw) / 2; } else { dh = W / ar; dy = (H - dh) / 2; }
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.fillStyle = 'rgba(13,12,10,0.42)';
+    ctx.fillRect(0, 0, W, H);
+    const ovTone = (cfg && cfg.overlayTone) || 'none';
+    const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
+    if (ovTone !== 'none' && ovOp > 0) {
+      ctx.fillStyle = ovTone === 'dark' ? `rgba(22,20,15,${ovOp})` : `rgba(255,254,242,${ovOp})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else {
+    // diagonal accent light streaks
+    ctx.save();
+    ctx.translate(W * 0.62, 0);
+    ctx.rotate(0.5);
+    const streak = ctx.createLinearGradient(0, 0, W * 0.55, 0);
+    streak.addColorStop(0, 'rgba(0,0,0,0)');
+    streak.addColorStop(0.5, accent + '');
+    streak.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = streak;
+    ctx.fillRect(-W * 0.1, -H * 0.2, W * 0.55, H * 1.6);
+    ctx.globalAlpha = 0.08;
+    ctx.fillRect(W * 0.35, -H * 0.2, W * 0.3, H * 1.6);
+    ctx.restore();
+  }
   // vignette
   const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.75);
   vig.addColorStop(0, 'rgba(0,0,0,0)');
