@@ -46,6 +46,8 @@ const GUMMY_KIND_RULES = [
   [/totenkopf|skull|schädel/, 'skull'],
   [/geist|ghost|halloween|grusel|vampir|engel|angel|zwerge/, 'ghost'],
   [/pfote|paw|tatze/, 'paw'],
+  [/telefon|hörer|hoerer|phone/, 'phone'],
+  [/werkzeug|hammer|schrauben|zange|säge|saege|bohrer|tool/, 'hammer'],
   [/haus\b|house|turm|dom\b|kirche|münster|michel|tor\b|schloss|schloß|eiffel|wolkenkratzer|porta|frauenkirche/, 'house'],
   [/diamant|raute|diamond|kristall/, 'gem'],
   [/fussball|fußball|football|ball\b|kugel/, 'ball'],
@@ -792,6 +794,45 @@ const makeGummyShape = (kind) => {
     return sh;
   }
 
+  if (kind === 'phone') {
+    // Classic telephone handset: banana-shaped handle bar with a round
+    // earpiece and mouthpiece bulging at each end.
+    sh.moveTo(-1.0, 0.18);
+    // earpiece (left bulb)
+    sh.bezierCurveTo(-1.32, 0.5, -1.18, 0.95, -0.78, 0.92);
+    sh.bezierCurveTo(-0.55, 0.9, -0.42, 0.74, -0.4, 0.55);
+    // top of the handle — shallow arc dipping toward the middle
+    sh.bezierCurveTo(-0.2, 0.34, 0.2, 0.34, 0.4, 0.55);
+    // mouthpiece (right bulb)
+    sh.bezierCurveTo(0.42, 0.74, 0.55, 0.9, 0.78, 0.92);
+    sh.bezierCurveTo(1.18, 0.95, 1.32, 0.5, 1.0, 0.18);
+    // underside — full banana sweep back to the earpiece
+    sh.bezierCurveTo(0.75, -0.12, 0.35, -0.28, 0, -0.28);
+    sh.bezierCurveTo(-0.35, -0.28, -0.75, -0.12, -1.0, 0.18);
+    return sh;
+  }
+
+  if (kind === 'hammer') {
+    // Claw hammer: broad head block on top, straight handle below.
+    sh.moveTo(-0.72, 0.98);            // head top-left
+    sh.lineTo(0.55, 0.98);             // head top edge
+    sh.quadraticCurveTo(0.78, 0.96, 0.82, 0.72);
+    sh.lineTo(0.82, 0.55);             // striking face
+    sh.quadraticCurveTo(0.78, 0.38, 0.55, 0.36);
+    sh.lineTo(0.17, 0.36);             // under head, right of handle
+    sh.lineTo(0.17, -0.9);             // handle right
+    sh.quadraticCurveTo(0.17, -1.02, 0.02, -1.02);
+    sh.lineTo(-0.13, -1.02);           // handle bottom
+    sh.quadraticCurveTo(-0.24, -1.02, -0.24, -0.9);
+    sh.lineTo(-0.24, 0.36);            // handle left
+    sh.lineTo(-0.5, 0.36);             // under head, left of handle
+    // claw — curved wedge dropping from the head's left
+    sh.quadraticCurveTo(-0.92, 0.3, -1.02, 0.02);
+    sh.quadraticCurveTo(-0.98, 0.4, -0.86, 0.62);
+    sh.quadraticCurveTo(-0.82, 0.9, -0.72, 0.98);
+    return sh;
+  }
+
   if (kind === 'paw') {
     const pad = new THREE.Shape();
     pad.absarc(0, -0.32, 0.001, 0, Math.PI * 2, false); // replaced below
@@ -904,8 +945,8 @@ const mergeGeos = (geos) => {
 // Geometry is normalized to bounding-sphere radius 1 so every kind ends
 // up a comparable size.
 const makeGummyGeometry = (kind, quality = 'high') => {
-  const seg = quality === 'high' ? 24 : 14;
-  const bevSeg = quality === 'high' ? 5 : 3;
+  const seg = quality === 'high' ? 48 : 16;
+  const bevSeg = quality === 'high' ? 8 : 3;
   let geo;
   if (kind === 'disc') {
     geo = new THREE.CylinderGeometry(1, 1, 0.55, 48);
@@ -958,6 +999,23 @@ const makeGummyGeometry = (kind, quality = 'high') => {
 // shader while the renderer outputs sRGB — without this conversion every
 // saturated flavor color washes out to pastel.
 const linCol = (col) => (col.isColor ? col.clone() : new THREE.Color(col)).convertSRGBToLinear();
+
+// Solid chocolate — matte cocoa body with a soft tempered-shine coat.
+// Used for advent-calendar pieces when the fill is set to chocolate.
+const makeChocolateMaterial = () => {
+  const cocoa = linCol(new THREE.Color('#452a16'));
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: cocoa,
+    roughness: 0.36,
+    metalness: 0,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.28,
+    emissive: cocoa,
+    emissiveIntensity: 0.03,
+  });
+  mat.envMapIntensity = 0.45;
+  return mat;
+};
 
 const makeGummyMaterial = (col, opts = {}) => {
   const cLin = linCol(col);
@@ -1031,16 +1089,16 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
   const base = Math.min(w, h);
 
   if (!transparent) {
-    // Paper base
-    ctx.fillStyle = '#f6f3ec';
+    // Paper base — warm cream, apothecary-style (never pure white)
+    ctx.fillStyle = '#fffef2';
     ctx.fillRect(0, 0, w, h);
   } else {
     // Legibility scrim over the AI image — light wash top & bottom, clearer middle
     const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, 'rgba(246,243,236,0.55)');
-    g.addColorStop(0.32, 'rgba(246,243,236,0.12)');
-    g.addColorStop(0.7, 'rgba(246,243,236,0.12)');
-    g.addColorStop(1, 'rgba(246,243,236,0.62)');
+    g.addColorStop(0, 'rgba(255,254,242,0.55)');
+    g.addColorStop(0.32, 'rgba(255,254,242,0.12)');
+    g.addColorStop(0.7, 'rgba(255,254,242,0.12)');
+    g.addColorStop(1, 'rgba(255,254,242,0.62)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
 
@@ -1050,61 +1108,58 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
     if (ovTone !== 'none' && ovOp > 0) {
       ctx.fillStyle = ovTone === 'dark'
         ? `rgba(22,20,15,${ovOp})`
-        : `rgba(246,243,236,${ovOp})`;
+        : `rgba(255,254,242,${ovOp})`;
       ctx.fillRect(0, 0, w, h);
     }
   }
 
-  // Accent top band (proportional to h)
-  ctx.fillStyle = accent;
-  const bandH = Math.round(h * 0.20);
-  ctx.fillRect(0, 0, w, bandH);
+  // ── Apothecary layout — centered, hairlines instead of bands, one
+  //    quiet accent moment. Inspired by print label typography: warm
+  //    graphite ink on cream, generous whitespace, no barcode chrome.
+  const pad = Math.round(w * 0.055);
+  const ink = (cfg && cfg.typoColor) || '#333333';
+  const cx = w / 2;
 
-  // Brand mark in the top band — uploaded logo replaces the FOOFAB wordmark
-  // when present (drawn knocked-out to band-contrast cream). Otherwise text.
-  const pad = Math.round(w * 0.04);
+  // Hairline frame inset — the "inked-on-paper" border
+  ctx.strokeStyle = ink;
+  ctx.globalAlpha = transparent ? 0.55 : 0.9;
+  ctx.lineWidth = Math.max(1.5, Math.round(base * 0.006));
+  ctx.strokeRect(pad * 0.55, pad * 0.55, w - pad * 1.1, h - pad * 1.1);
+  ctx.globalAlpha = 1;
+
+  // Brand — uploaded logo (re-inked) or the FOOFAB wordmark, centered
   const logoImg = cfg && cfg._logoImage;
+  const brandCY = Math.round(h * 0.13);
   if (logoImg && logoImg.width) {
-    const maxLH = bandH * 0.52;
-    const maxLW = w * 0.5;
+    const maxLH = h * 0.085, maxLW = w * 0.42;
     const ar = logoImg.width / logoImg.height;
     let lh = maxLH, lw = lh * ar;
     if (lw > maxLW) { lw = maxLW; lh = lw / ar; }
-    const lx = pad;
-    const ly = (bandH - lh) / 2;
-    // Knock the (black) logo out to cream so it reads on the accent band
     const off = document.createElement('canvas');
     off.width = Math.max(2, Math.round(lw * 2));
     off.height = Math.max(2, Math.round(lh * 2));
     const octx = off.getContext('2d');
     octx.drawImage(logoImg, 0, 0, off.width, off.height);
     octx.globalCompositeOperation = 'source-in';
-    octx.fillStyle = '#f6f3ec';
+    octx.fillStyle = ink;
     octx.fillRect(0, 0, off.width, off.height);
-    ctx.drawImage(off, lx, ly, lw, lh);
+    ctx.drawImage(off, cx - lw / 2, brandCY - lh / 2, lw, lh);
   } else {
-    ctx.fillStyle = '#f6f3ec';
-    ctx.font = `700 ${Math.round(base * 0.075)}px monospace`;
-    ctx.textBaseline = 'top';
-    ctx.fillText('FOOFAB', pad, Math.round(bandH * 0.30));
+    ctx.fillStyle = ink;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `500 ${Math.round(base * 0.055)}px "Neue Rational Mono", monospace`;
+    try { ctx.letterSpacing = `${Math.round(base * 0.02)}px`; } catch (e) {}
+    ctx.fillText('F O O F A B', cx, brandCY);
+    try { ctx.letterSpacing = '0px'; } catch (e) {}
   }
 
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#f6f3ec';
-  ctx.textBaseline = 'top';
-  ctx.font = `700 ${Math.round(base * 0.058)}px monospace`;
-  ctx.fillText(`[ ${pack.toUpperCase()} ]`, w - pad, Math.round(bandH * 0.34));
-  ctx.textAlign = 'left';
-
-  // Typo color — applies to all dark text on the label body
-  const typoColor = (cfg && cfg.typoColor) || '#16140f';
-
-  // Product name — title uses base-relative size; wrap if too long.
-  // typoStyle controls the title typeface independently of the background.
-  ctx.fillStyle = typoColor;
-  const titleSize = Math.round(base * 0.22);
+  // Product name — the single expressive moment, centered
+  ctx.fillStyle = ink;
+  ctx.textAlign = 'center';
+  const titleSize = Math.round(base * 0.205);
   ctx.font = titleFontFor(typoStyle, titleSize);
-  const maxW = w - pad * 2;
+  const maxW = w - pad * 2.6;
   const words = name.split(' ');
   const lines = [];
   let cur = '';
@@ -1118,69 +1173,62 @@ const drawLabelCanvas = (cfg, pack, widthUnits, heightUnits, opts) => {
     }
   }
   if (cur) lines.push(cur);
-  const lineH = titleSize * 1.05;
+  const lineH = titleSize * 1.08;
   const blockH = lines.length * lineH;
-  // Vertically center the title block in the space between the top band
-  // and the divider, using middle baseline for true optical centering.
-  const areaTop = bandH;
-  const areaBottom = h - Math.round(h * 0.30);
-  const areaCenter = (areaTop + areaBottom) / 2;
+  const areaCenter = h * 0.44;
   ctx.textBaseline = 'middle';
-  // Super-light shadow behind the title for legibility on busy artwork
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.18)';
-  ctx.shadowBlur = Math.round(base * 0.025);
-  ctx.shadowOffsetY = Math.round(base * 0.006);
+  if (transparent) {
+    // light shadow only when type sits on artwork
+    ctx.shadowColor = 'rgba(0,0,0,0.18)';
+    ctx.shadowBlur = Math.round(base * 0.02);
+    ctx.shadowOffsetY = Math.round(base * 0.005);
+  }
   lines.forEach((line, i) => {
     const y = areaCenter - blockH / 2 + lineH / 2 + i * lineH;
-    ctx.fillText(line, pad, y);
+    ctx.fillText(line, cx, y);
   });
   ctx.restore();
-  ctx.textBaseline = 'top';
 
-  // Divider
-  ctx.strokeStyle = typoColor;
-  ctx.lineWidth = Math.max(2, Math.round(h * 0.004));
-  const divY = h - Math.round(h * 0.28);
+  // Short centered hairline under the name
+  const ruleY = Math.round(areaCenter + blockH / 2 + h * 0.05);
+  ctx.strokeStyle = ink;
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = Math.max(1.5, Math.round(base * 0.005));
   ctx.beginPath();
-  ctx.moveTo(pad, divY);
-  ctx.lineTo(w - pad, divY);
+  ctx.moveTo(cx - w * 0.11, ruleY);
+  ctx.lineTo(cx + w * 0.11, ruleY);
   ctx.stroke();
-
-  // Handle + weight row
-  ctx.font = `700 ${Math.round(base * 0.065)}px monospace`;
-  ctx.fillStyle = typoColor;
-  ctx.textBaseline = 'top';
-  ctx.fillText(handle, pad, divY + Math.round(h * 0.04));
-  ctx.textAlign = 'right';
-  ctx.fillText(`${cfg?.weight || 120}G`, w - pad, divY + Math.round(h * 0.04));
-  ctx.textAlign = 'left';
-
-  // Flavor line
-  ctx.font = `${Math.round(base * 0.05)}px monospace`;
-  ctx.fillStyle = typoColor;
-  ctx.globalAlpha = 0.7;
-  ctx.fillText(`FLAVOR · ${(cfg?.flavor || '').replace('-', ' ').toUpperCase()}`,
-    pad, divY + Math.round(h * 0.11));
-
   ctx.globalAlpha = 1;
 
-  // Bottom accent stripe
-  ctx.fillStyle = accent;
-  ctx.fillRect(0, h - Math.round(h * 0.035), w, Math.round(h * 0.035));
+  // Flavor — small tracked caption, centered
+  ctx.fillStyle = ink;
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 ${Math.round(base * 0.05)}px "Neue Rational Mono", monospace`;
+  try { ctx.letterSpacing = `${Math.round(base * 0.012)}px`; } catch (e) {}
+  ctx.globalAlpha = 0.75;
+  ctx.fillText((cfg?.flavor || '').replace('-', ' ').toUpperCase(), cx, ruleY + h * 0.055);
+  ctx.globalAlpha = 1;
+  try { ctx.letterSpacing = '0px'; } catch (e) {}
 
-  // Barcode at bottom right
-  const barX = w - pad - Math.round(base * 0.30);
-  const barY = h - Math.round(h * 0.115);
-  const barH = Math.round(h * 0.06);
-  ctx.fillStyle = typoColor;
-  const widths = [2, 4, 2, 6, 3, 2, 5, 3, 2, 4, 2, 3, 6, 2, 4];
-  let bx = barX;
-  for (const bw of widths) {
-    const scale = Math.max(1, base * 0.004);
-    ctx.fillRect(bx, barY, bw * scale, barH);
-    bx += (bw + 3) * scale;
-  }
+  // One quiet accent moment — a small centered square in the candy color
+  ctx.fillStyle = accent;
+  const dotS = Math.max(4, Math.round(base * 0.022));
+  ctx.fillRect(cx - dotS / 2, Math.round(h * 0.795) - dotS / 2, dotS, dotS);
+
+  // Bottom row — handle left, weight right, tiny captions above the frame
+  ctx.fillStyle = ink;
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 ${Math.round(base * 0.045)}px "Neue Rational Mono", monospace`;
+  const rowY = h - pad * 0.55 - Math.round(h * 0.055);
+  ctx.globalAlpha = 0.85;
+  ctx.textAlign = 'left';
+  ctx.fillText(handle, pad * 1.4, rowY);
+  ctx.textAlign = 'right';
+  ctx.fillText(`${cfg?.weight || 120} G`, w - pad * 1.4, rowY);
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
@@ -1199,7 +1247,7 @@ const relLuminance = (hex) => {
   return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 };
 
-const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
+const drawFilmCanvas = (cfg, widthUnits, heightUnits, opts) => {
   const PX_PER_UNIT = 420;
   const w = Math.max(256, Math.round(widthUnits * PX_PER_UNIT));
   const h = Math.max(256, Math.round(heightUnits * PX_PER_UNIT));
@@ -1207,16 +1255,39 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
 
+  // transparent = decal mode: the pouch body itself carries the pack
+  // color, so only the printed elements are drawn (alpha background).
+  const transparent = !!(opts && opts.transparent);
   const packColor = cfg?.packColor || '#2f6b3f';
   const lightFilm = relLuminance(packColor) > 0.55;
-  const ink = cfg?.typoColor || (lightFilm ? '#16140f' : '#f6f3ec');
+  const ink = cfg?.typoColor || (lightFilm ? '#16140f' : '#fffef2');
   const name = (cfg?.name || 'your product name here');
   const handle = '@' + (cfg?.handle || 'foodcreator');
   const pad = Math.round(w * 0.075);
 
-  // Background: AI artwork (covered) or the plain film color. Slightly
-  // translucent so the tinted film + candy behind ghost through a touch.
-  if (cfg && cfg._bgImage) {
+  if (transparent) {
+    // Decal mode: optional artwork sits in a printed panel mid-pouch;
+    // the user overlay applies inside that panel only.
+    if (cfg && cfg._bgImage) {
+      const px = pad, pw2 = w - pad * 2;
+      const py = Math.round(h * 0.32), ph2 = Math.round(h * 0.36);
+      const img = cfg._bgImage;
+      const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+      const ar = iw / ih, tar = pw2 / ph2;
+      let dw = pw2, dh = ph2, dx = px, dy = py;
+      if (ar > tar) { dw = ph2 * ar; dx = px + (pw2 - dw) / 2; } else { dh = pw2 / ar; dy = py + (ph2 - dh) / 2; }
+      ctx.save();
+      ctx.beginPath(); ctx.rect(px, py, pw2, ph2); ctx.clip();
+      ctx.drawImage(img, dx, dy, dw, dh);
+      const ovTone = (cfg && cfg.overlayTone) || 'none';
+      const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
+      if (ovTone !== 'none' && ovOp > 0) {
+        ctx.fillStyle = ovTone === 'dark' ? `rgba(22,20,15,${ovOp})` : `rgba(255,254,242,${ovOp})`;
+        ctx.fillRect(px, py, pw2, ph2);
+      }
+      ctx.restore();
+    }
+  } else if (cfg && cfg._bgImage) {
     const img = cfg._bgImage;
     const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
     const ar = iw / ih, tar = w / h;
@@ -1252,15 +1323,15 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
   }
 
   // User-controlled overlay BETWEEN background and type (tone + opacity) —
-  // same behavior as the paper label, so the branding control works on
-  // the doypack film print too.
-  {
+  // full-surface on the printed film; in decal mode it already ran
+  // inside the artwork panel above.
+  if (!transparent) {
     const ovTone = (cfg && cfg.overlayTone) || 'none';
     const ovOp = (cfg && typeof cfg.overlayOpacity === 'number') ? cfg.overlayOpacity : 0;
     if (ovTone !== 'none' && ovOp > 0) {
       ctx.fillStyle = ovTone === 'dark'
         ? `rgba(22,20,15,${ovOp})`
-        : `rgba(246,243,236,${ovOp})`;
+        : `rgba(255,254,242,${ovOp})`;
       ctx.fillRect(0, 0, w, h);
     }
   }
@@ -1288,15 +1359,6 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
     ctx.textBaseline = 'top';
     ctx.fillText('FOOFAB', pad, brandY);
   }
-  ctx.fillStyle = ink;
-  ctx.globalAlpha = 0.75;
-  ctx.font = `500 ${Math.round(w * 0.032)}px "Neue Rational Mono", monospace`;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.fillText('[ DOYPACK ]', w - pad, brandY + Math.round(w * 0.012));
-  ctx.textAlign = 'left';
-  ctx.globalAlpha = 1;
-
   // Big stacked title — WTG-style chunky uppercase block.
   // The typo-style picker switches the typeface here too; the mono
   // default keeps the original WTG look.
@@ -1348,21 +1410,6 @@ const drawFilmCanvas = (cfg, widthUnits, heightUnits) => {
   ctx.font = `500 ${Math.round(w * 0.042)}px "Neue Rational Mono", monospace`;
   ctx.fillText(`saure fruchtgummis · ${flavorTxt}`, pad, ty + Math.round(h * 0.012));
   ctx.globalAlpha = 1;
-
-  // Shape note (small, accent color chip) — ties the print to the chosen form
-  const shapeName = (cfg?.shapeName || '').toLowerCase();
-  if (shapeName) {
-    const chipY = ty + Math.round(h * 0.055);
-    ctx.font = `500 ${Math.round(w * 0.032)}px "Neue Rational Mono", monospace`;
-    const txt = `form · ${shapeName}`;
-    const tw = ctx.measureText(txt).width;
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = ink;
-    ctx.fillRect(pad, chipY, tw + Math.round(w * 0.03), Math.round(w * 0.055));
-    ctx.globalAlpha = 0.9;
-    ctx.fillText(txt, pad + Math.round(w * 0.015), chipY + Math.round(w * 0.038));
-    ctx.globalAlpha = 1;
-  }
 
   // Bottom block: divider, handle, weight, edition note
   const divY = Math.round(h * 0.855);
@@ -1571,6 +1618,10 @@ const pouchPuff = (t) => 0.08 + 0.92 * Math.pow(Math.cos(Math.max(-1, Math.min(1
 const pouchWidth = (t) => 1 - 0.075 * Math.pow(Math.abs(t), 2.6);
 
 const buildPouch = (cfg) => {
+  // Scanned crinkled pouch when the GLB is ready — procedural fallback
+  if (cfg && cfg._pouchScene) {
+    try { return buildPouchFromGLB(cfg, cfg._pouchScene); } catch (e) { /* fall through */ }
+  }
   const group = new THREE.Group();
   const packColor = cfg?.packColor || '#2f6b3f';
   const tints = PACK_TINTS(packColor);
@@ -1948,12 +1999,16 @@ const drawBarWrapCanvas = (cfg, widthUnits, heightUnits) => {
   ctx.fillStyle = sheen;
   ctx.fillRect(0, 0, w, h);
 
-  // tiny brand line top-left
+  // tiny centered brand line
   ctx.fillStyle = cream;
-  ctx.globalAlpha = 0.8;
-  ctx.font = `500 ${Math.round(h * 0.085)}px "Neue Rational Mono", monospace`;
+  ctx.globalAlpha = 0.85;
+  ctx.font = `500 ${Math.round(h * 0.08)}px "Neue Rational Mono", monospace`;
   ctx.textBaseline = 'top';
-  ctx.fillText('FOOFAB · SINCE 2026', pad, Math.round(h * 0.09));
+  ctx.textAlign = 'center';
+  try { ctx.letterSpacing = `${Math.round(h * 0.03)}px`; } catch (e) {}
+  ctx.fillText('F O O F A B', w / 2, Math.round(h * 0.09));
+  try { ctx.letterSpacing = '0px'; } catch (e) {}
+  ctx.textAlign = 'left';
   ctx.globalAlpha = 1;
 
   // huge centered wordmark — auto-shrink to one or two lines
@@ -2327,8 +2382,10 @@ const buildFlatLabel = ({ cfg, pack, width, height, faceDepth }) => {
 // Wraparound label (jar, tin, tube) — cylinder slice around Y axis
 const buildWraparoundLabel = ({ cfg, pack, radius, height, thetaDeg = 170, yOffset = 0 }) => {
   const thetaLength = (thetaDeg * Math.PI) / 180;
+  // Center the label arc on +Z so it faces the camera in the default
+  // view (CylinderGeometry: x = r·sinθ, z = r·cosθ → θ=0 is front).
   const arcLength = radius * thetaLength;
-  const thetaStart = -Math.PI / 2 - thetaLength / 2;
+  const thetaStart = -thetaLength / 2;
   const hasBg = !!(cfg && cfg._bgImage);
   const group = new THREE.Group();
   group.name = '__foofab_label__';
@@ -2363,6 +2420,92 @@ const buildWraparoundLabel = ({ cfg, pack, radius, height, thetaDeg = 170, yOffs
 // ───────────────────────────────────────────────────────────────────
 // Component
 // ───────────────────────────────────────────────────────────────────
+
+// ───────────────────────────────────────────────────────────────────
+// Crinkled-pouch GLB (photogrammetry-style scan) — loaded once and
+// cloned per build. The white film gets tinted to the pack color and
+// the print is projected as a decal so it follows every wrinkle.
+// ───────────────────────────────────────────────────────────────────
+let __pouchGLBPromise = null;
+const loadPouchGLB = () => {
+  if (__pouchGLBPromise) return __pouchGLBPromise;
+  __pouchGLBPromise = new Promise((resolve) => {
+    if (!THREE.GLTFLoader) return resolve(null);
+    try {
+      new THREE.GLTFLoader().load('assets/models/pouch-crinkled.glb',
+        (gltf) => resolve(gltf.scene || null),
+        undefined,
+        () => resolve(null));
+    } catch (e) { resolve(null); }
+  });
+  return __pouchGLBPromise;
+};
+
+const buildPouchFromGLB = (cfg, src) => {
+  const group = new THREE.Group();
+  const packColor = cfg?.packColor || '#2f6b3f';
+  const pouch = src.clone(true);
+
+  // Normalize to the procedural pouch's height, centered at the origin
+  const box = new THREE.Box3().setFromObject(pouch);
+  const size = box.getSize(new THREE.Vector3());
+  const s = POUCH_H / (size.y || 1);
+  pouch.scale.setScalar(s);
+  pouch.updateMatrixWorld(true);
+  const box2 = new THREE.Box3().setFromObject(pouch);
+  const center = box2.getCenter(new THREE.Vector3());
+  pouch.position.sub(center);
+  pouch.updateMatrixWorld(true);
+
+  // Tint the white film, kill the baked emissive (it would fight the
+  // HDRI), and clone materials so the cached GLB stays untouched.
+  let bodyMesh = null;
+  pouch.traverse((c) => {
+    if (c.isMesh) {
+      bodyMesh = c;
+      c.castShadow = true;
+      c.receiveShadow = true;
+      c.userData.__keepMaps = true; // shared GLB textures — never dispose
+      const m = c.material ? c.material.clone() : null;
+      if (m) {
+        m.color = linCol(new THREE.Color(packColor));
+        if (m.emissive) m.emissive.setRGB(0, 0, 0);
+        m.emissiveMap = null;
+        if (typeof m.roughness === 'number') m.roughness = Math.min(0.85, m.roughness * 0.9);
+        m.envMapIntensity = 0.85;
+        m.needsUpdate = true;
+        c.material = m;
+      }
+    }
+  });
+  group.add(pouch);
+
+  // Project the print onto the crinkled front as a decal
+  if (bodyMesh && THREE.DecalGeometry) {
+    try {
+      const bb = new THREE.Box3().setFromObject(pouch);
+      const sz = bb.getSize(new THREE.Vector3());
+      const dPos = new THREE.Vector3(0, sz.y * 0.03, bb.max.z);
+      const dRot = new THREE.Euler(0, 0, 0);
+      const dSize = new THREE.Vector3(sz.x * 0.8, sz.y * 0.74, Math.max(0.7, sz.z * 1.6));
+      const tex = drawFilmCanvas(cfg, dSize.x, dSize.y, { transparent: true });
+      const decalGeo = new THREE.DecalGeometry(bodyMesh, dPos, dRot, dSize);
+      const decalMat = new THREE.MeshPhysicalMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        roughness: 0.5,
+        metalness: 0,
+      });
+      decalMat.envMapIntensity = 0.5;
+      const decal = new THREE.Mesh(decalGeo, decalMat);
+      group.add(decal);
+    } catch (e) { /* decal optional — tinted pouch still shows */ }
+  }
+  return group;
+};
 
 const BUILDERS = {
   pouch:    buildPouch,
@@ -2484,8 +2627,9 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
     rim.position.set(-3, 5, -6);
     scene.add(rim);
 
-    // Soft studio hemisphere + generated environment map for realistic
-    // reflections on glass / tin / candy materials.
+    // Soft studio hemisphere + environment lighting. A quick canvas env
+    // fills in immediately; the real HDRI (EXR) upgrades it as soon as
+    // it's decoded — background stays the flavor gradient either way.
     const hemi = new THREE.HemisphereLight(0xffffff, 0xcfccc3, 0.5);
     scene.add(hemi);
     try {
@@ -2508,6 +2652,24 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       scene.environment = cubeRT.texture;
       envTex.dispose();
     } catch (e) { /* env optional */ }
+
+    // HDRI upgrade — real image-based lighting for glass, foil and candy.
+    let pmrem = null;
+    if (THREE.EXRLoader) {
+      try {
+        new THREE.EXRLoader()
+          .setDataType(THREE.HalfFloatType || THREE.FloatType)
+          .load('assets/hdri/studio_1k.exr', (tex) => {
+            try {
+              pmrem = new THREE.PMREMGenerator(renderer);
+              pmrem.compileEquirectangularShader();
+              const envRT = pmrem.fromEquirectangular(tex);
+              scene.environment = envRT.texture;
+              tex.dispose();
+            } catch (e) { /* keep canvas env */ }
+          }, undefined, () => { /* keep canvas env on load error */ });
+      } catch (e) { /* keep canvas env */ }
+    }
 
     // Shadow-only ground — the flavor backdrop stays a clean color field
     // (no floor horizon), the product still casts a soft grounding shadow.
@@ -2536,7 +2698,8 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
         const wigX = Math.sin(now * 0.34) * 1.4;
         obj.rotation.y = ((t.y + wigY) * Math.PI) / 180;
         obj.rotation.x = ((t.x + wigX) * Math.PI) / 180;
-        obj.position.y = Math.sin(now * 0.8) * 0.09;
+        // hover a tick above center so the product sits higher in frame
+        obj.position.y = 0.24 + Math.sin(now * 0.8) * 0.09;
         obj.traverse((c) => {
           const u = c.userData;
           if (u && u.floatAmp) {
@@ -2566,6 +2729,7 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      if (pmrem) pmrem.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
@@ -2580,9 +2744,10 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
     if (!scene) return;
     const c = new THREE.Color(flavorHex);
     const white = new THREE.Color('#ffffff');
-    const top = c.clone().lerp(white, 0.82);
-    const mid = c.clone().lerp(white, 0.72);
-    const bot = c.clone().lerp(white, 0.55);
+    // Punchier stage color — clearly the flavor, not just a whisper of it
+    const top = c.clone().lerp(white, 0.6);
+    const mid = c.clone().lerp(white, 0.46);
+    const bot = c.clone().lerp(white, 0.28);
     const bc = document.createElement('canvas');
     bc.width = 16; bc.height = 512;
     const bx = bc.getContext('2d');
@@ -2610,9 +2775,10 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
         scene.remove(objectRef.current);
         objectRef.current.traverse((c) => {
           if (c.isMesh) {
-            c.geometry?.dispose();
+            const keepMaps = !!c.userData.__keepMaps; // shared GLB textures
+            if (!keepMaps) c.geometry?.dispose();
             const mats = Array.isArray(c.material) ? c.material : [c.material];
-            mats.forEach(m => { m?.map?.dispose(); m?.dispose(); });
+            mats.forEach(m => { if (!keepMaps) m?.map?.dispose(); m?.dispose(); });
           } else if (c.isSprite) {
             // dispose the material but NOT the shared sparkle texture
             c.material?.dispose();
@@ -2622,11 +2788,11 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       }
     };
 
-    const build = (bgImage, logoImage, shapeImage) => {
+    const build = (bgImage, logoImage, shapeImage, pouchScene) => {
       if (cancelled) return;
       disposePrev();
       const builder = BUILDERS[cfg.pack] || BUILDERS.pouch;
-      const obj = builder({ ...cfg, _bgImage: bgImage, _logoImage: logoImage, _pieces: showPieces });
+      const obj = builder({ ...cfg, _bgImage: bgImage, _logoImage: logoImage, _pieces: showPieces, _pouchScene: pouchScene || null });
       obj.traverse((c) => {
         if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
       });
@@ -2640,10 +2806,13 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       const floaterStyle = floaterStyleFor(cfg);
       if (showPieces && floaterStyle !== 'none' && cfg.pack !== 'jar') {
         const isNuts = floaterStyle === 'nuts';
+        // Advent calendar: fill is either gummies or chocolate — same
+        // shape catalog, different materiality.
+        const isChoc = cfg.base === 'advent calendar' && cfg.calFill === 'chocolate';
         const kind = isNuts ? null : gummyKindFor(cfg);
         const geo = isNuts ? null : makeGummyGeometry(kind, 'high');
         const col = new THREE.Color(gummyColorFor(cfg));
-        const mat = isNuts ? null : makeGummyMaterial(col, { thickness: 1.0 });
+        const mat = isNuts ? null : (isChoc ? makeChocolateMaterial() : makeGummyMaterial(col, { thickness: 1.0 }));
         const spots = [
           { x: -2.55, y: 1.35,  z: 0.5,  s: 0.42, rx: 0.3,  ry: 0.5,  rz: -0.2 },
           { x: -2.8,  y: -0.85, z: -0.3, s: 0.34, rx: -0.2, ry: -0.4, rz: 0.25 },
@@ -2703,25 +2872,60 @@ const ThreeProductPreview = ({ cfg, tilt, onTiltChange, showPieces = true }) => 
       img.src = src;
     });
 
-    Promise.all([loadImg(cfg.labelBgUrl), loadImg(cfg.logo), loadImg(cfg.shapeImg)])
-      .then(([bg, logo, shape]) => build(bg, logo, shape));
+    Promise.all([
+      loadImg(cfg.labelBgUrl),
+      loadImg(cfg.logo),
+      loadImg(cfg.shapeImg),
+      cfg.pack === 'pouch' ? loadPouchGLB() : Promise.resolve(null),
+    ]).then(([bg, logo, shape, pouchScene]) => build(bg, logo, shape, pouchScene));
 
     return () => { cancelled = true; };
-  }, [cfg.pack, cfg.base, cfg.color, cfg.packColor, cfg.name, cfg.handle, cfg.flavor, cfg.flavorDe, cfg.shapeId, cfg.shapeName, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity, cfg.shapeImg, showPieces]);
+  }, [cfg.pack, cfg.base, cfg.color, cfg.packColor, cfg.name, cfg.handle, cfg.flavor, cfg.flavorDe, cfg.shapeId, cfg.shapeName, cfg.weight, cfg.labelBgUrl, cfg.typoStyle, cfg.logo, cfg.typoColor, cfg.overlayTone, cfg.overlayOpacity, cfg.shapeImg, cfg.calFill, showPieces]);
 
-  // Locked hero view — no drag, no HUD. Just the floating product on a
-  // flavor-tinted stage.
+  // Hero view with drag-to-rotate: pointer drag adjusts the base tilt,
+  // the float + wiggle animation rides on top. No HUD chrome.
+  const dragRef = React.useRef(null);
+  const onPointerDown = (e) => {
+    dragRef.current = { x: e.clientX, y: e.clientY, tilt: { ...(tiltRef.current || { x: -9, y: 17 }) } };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.style.cursor = 'grabbing';
+  };
+  const onPointerMove = (e) => {
+    if (!dragRef.current || !onTiltChange) return;
+    if (e.cancelable) e.preventDefault();
+    const dx = e.clientX - dragRef.current.x;
+    const dy = e.clientY - dragRef.current.y;
+    const isTouch = e.pointerType === 'touch';
+    const sx = isTouch ? 0.9 : 0.5;
+    const sy = isTouch ? 0.7 : 0.4;
+    onTiltChange({
+      y: dragRef.current.tilt.y + dx * sx,
+      x: Math.max(-60, Math.min(60, dragRef.current.tilt.x - dy * sy)),
+    });
+  };
+  const onPointerUp = (e) => {
+    dragRef.current = null;
+    if (e?.currentTarget) e.currentTarget.style.cursor = 'grab';
+  };
+
   return (
     <div className="pv3d" style={{
       width: '100%',
       aspectRatio: '1 / 1.15',
       position: 'relative',
-      background: `color-mix(in srgb, ${flavorHex} 24%, #ffffff)`,
+      background: `color-mix(in srgb, ${flavorHex} 42%, #ffffff)`,
       border: '1px solid var(--line)',
       overflow: 'hidden',
+      cursor: 'grab',
+      touchAction: 'none',
       WebkitUserSelect: 'none',
       userSelect: 'none',
-    }}>
+    }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
     </div>
   );

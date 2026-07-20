@@ -1112,6 +1112,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
     name: '',
     func: 'none',
     funcNote: '',
+    calFill: 'gummies',
     handle: 'foodcreator.hh',
     weight: 120,
     density: 9,
@@ -1229,9 +1230,24 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
     }
   };
 
-  // Locked hero view — fixed base orientation, the 3D preview adds its
-  // own float + wiggle animation on top.
-  const tilt = { x: -9, y: 17 };
+  // Hero view: drag rotates around this base tilt; the 3D preview adds
+  // its own float + wiggle animation on top.
+  const [tilt, setTilt] = React.useState({ x: -9, y: 17 });
+
+  // Shape step availability: nuts and chocolate bars ship in fixed
+  // shapes, so the step is grayed out. The advent calendar picks its
+  // fill (gummies/chocolate) inside the shape step instead.
+  const shapeDisabled = cfg.base === 'nuts' || cfg.base === 'chocolate bars';
+  const stepAfter = (i) => {
+    let n = Math.min(STEPS.length - 1, i + 1);
+    if (n === 1 && shapeDisabled) n = 2;
+    return n;
+  };
+  const stepBefore = (i) => {
+    let p = Math.max(0, i - 1);
+    if (p === 1 && shapeDisabled) p = 0;
+    return p;
+  };
 
   const pricePer = 1.00;
   const retail = 3.49;
@@ -1264,31 +1280,37 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
 
       {/* stepper */}
       <div className="mobile-stepper" style={{ display: 'flex', gap: 0, marginBottom: 32, borderBottom: '1px solid var(--line)', overflowX: 'auto' }}>
-        {STEPS.map((s, i) => (
-          <button
-            key={s.id}
-            onClick={() => setStep(i)}
-            style={{
-              flex: '1 0 auto',
-              minWidth: 110,
-              padding: '14px 16px',
-              textAlign: 'left',
-              borderRight: i < STEPS.length - 1 ? '1px solid var(--line)' : 'none',
-              borderBottom: step === i ? '2px solid var(--accent)' : '2px solid transparent',
-              color: step === i ? 'var(--fg)' : 'var(--fg-3)',
-              background: step === i ? 'var(--bg-2)' : 'transparent',
-              transition: 'all 140ms',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', marginBottom: 4 }}>
-              {s.k}
-            </div>
-            <div style={{ fontSize: 'calc(13px * var(--scale))', color: step === i ? 'var(--fg)' : 'var(--fg-2)' }}>
-              {lang === 'de' ? s.de : s.label}
-            </div>
-          </button>
-        ))}
+        {STEPS.map((s, i) => {
+          const disabled = i === 1 && shapeDisabled;
+          return (
+            <button
+              key={s.id}
+              onClick={() => { if (!disabled) setStep(i); }}
+              disabled={disabled}
+              title={disabled ? (lang === 'de' ? 'feste formen bei dieser basis' : 'fixed shapes for this base') : undefined}
+              style={{
+                flex: '1 0 auto',
+                minWidth: 110,
+                padding: '14px 16px',
+                textAlign: 'left',
+                borderRight: i < STEPS.length - 1 ? '1px solid var(--line)' : 'none',
+                borderBottom: step === i ? '2px solid var(--accent)' : '2px solid transparent',
+                color: step === i ? 'var(--fg)' : 'var(--fg-3)',
+                background: step === i ? 'var(--bg-2)' : 'transparent',
+                transition: 'all 140ms',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.35 : 1,
+              }}
+            >
+              <div style={{ fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.15em', marginBottom: 4 }}>
+                {s.k}
+              </div>
+              <div style={{ fontSize: 'calc(13px * var(--scale))', color: step === i ? 'var(--fg)' : 'var(--fg-2)' }}>
+                {lang === 'de' ? s.de : s.label}
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <div className="m-stack" style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 40 }}>
@@ -1356,6 +1378,34 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
 
           {step === 1 && (
             <div>
+              {/* Advent calendar: pick what's inside — same shape catalog,
+                  different materiality in the 3D preview */}
+              {cfg.base === 'advent calendar' && (
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
+                    {lang === 'de' ? 'was ist in den türchen?' : "what's behind the doors?"}
+                  </label>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                    {[
+                      ['gummies', 'gummies'],
+                      ['chocolate', lang === 'de' ? 'schokolade' : 'chocolate'],
+                    ].map(([val, lbl]) => (
+                      <button key={val}
+                        onClick={() => setCfg({ ...cfg, calFill: val })}
+                        style={{
+                          flex: 1, padding: '13px 12px', minHeight: 46,
+                          border: `1px solid ${(cfg.calFill || 'gummies') === val ? 'var(--fg)' : 'var(--line)'}`,
+                          background: (cfg.calFill || 'gummies') === val ? 'var(--bg-2)' : 'transparent',
+                          color: 'inherit', cursor: 'pointer',
+                          fontSize: 'calc(13px * var(--scale))', fontWeight: 600,
+                        }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <label style={{ color: 'var(--fg-3)', fontSize: 'calc(10px * var(--scale))', letterSpacing: '0.2em' }}>
                 {lang === 'de' ? 'form wählen' : 'pick a shape'} {shapesData.length ? `· ${shapesFiltered.length}/${shapesData.length}` : ''}
               </label>
@@ -1565,25 +1615,10 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                     }} />
                 </div>
 
-                {/* packaging — compact type + color, folded into branding */}
+                {/* packaging color + fill — the pack type follows the base */}
                 <div>
-                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'verpackung' : 'packaging'}</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {PACKAGES.filter(p => p.bases.includes(cfg.base)).map(p => (
-                      <button key={p.id}
-                        onClick={() => setCfg({ ...cfg, pack: p.id })}
-                        style={{
-                          padding: '10px 16px', minHeight: 40,
-                          border: `1px solid ${cfg.pack === p.id ? 'var(--fg)' : 'var(--line)'}`,
-                          background: cfg.pack === p.id ? 'var(--bg-2)' : 'transparent',
-                          color: 'inherit', cursor: 'pointer',
-                          fontSize: 'calc(12px * var(--scale))',
-                        }}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ fontSize: 'calc(11px * var(--scale))', color: 'var(--fg-2)', marginBottom: 8 }}>{lang === 'de' ? 'verpackungs-farbe' : 'packaging color'}</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     {[
                       { c: '#2f6b3f', l: 'forest' },
                       { c: '#c85250', l: 'tomato' },
@@ -1867,10 +1902,15 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                   const fnLabel = cfg.funcNote
                     ? (lang === 'de' ? 'eigene idee' : 'custom idea')
                     : (lang === 'de' ? fn.de : fn.en) + (fn.actives ? ` (${fn.actives})` : '');
+                  const shapeVal = shapeDisabled
+                    ? (lang === 'de' ? 'feste formen' : 'fixed shapes')
+                    : (cfg.shapeName || '·') + (cfg.base === 'advent calendar'
+                        ? ' · ' + (cfg.calFill === 'chocolate' ? (lang === 'de' ? 'schokolade' : 'chocolate') : 'gummies')
+                        : '');
                   const rows = [
                     [lang === 'de' ? 'konzept' : 'concept', cfg.name || '·'],
                     [lang === 'de' ? 'kategorie' : 'category', cfg.base],
-                    [lang === 'de' ? 'form' : 'shape', cfg.shapeName || '·'],
+                    [lang === 'de' ? 'form' : 'shape', shapeVal],
                     [lang === 'de' ? 'geschmack' : 'flavor', (lang === 'de' ? cfg.flavorDe : cfg.flavor) || '·'],
                     [lang === 'de' ? 'funktion' : 'function', fnLabel],
                     [lang === 'de' ? 'verpackung' : 'packaging', cfg.pack],
@@ -1943,7 +1983,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
           {/* nav */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 40 }}>
             <button
-              onClick={() => setStep(Math.max(0, step - 1))}
+              onClick={() => setStep(stepBefore(step))}
               disabled={step === 0}
               style={{
                 padding: '12px 20px', border: '1px solid var(--line)',
@@ -1955,7 +1995,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
               <Arrow dir="left" /> {lang === 'de' ? 'zurück' : 'back'}
             </button>
             <button
-              onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))}
+              onClick={() => setStep(stepAfter(step))}
               disabled={step === STEPS.length - 1}
               style={{
                 padding: '12px 24px',
@@ -1965,7 +2005,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
                 display: 'flex', alignItems: 'center', gap: 10,
               }}
             >
-              {lang === 'de' ? 'weiter' : 'next'} → {STEPS[Math.min(STEPS.length - 1, step + 1)].label}
+              {lang === 'de' ? 'weiter' : 'next'} → {STEPS[stepAfter(step)].label}
             </button>
           </div>
         </div>
@@ -1976,7 +2016,7 @@ const Configurator = ({ lang = 'en', initialStep = 0, onBack }) => {
           <div className="m-preview-sticky" style={{
             position: 'sticky', top: 80,
           }}>
-            <ThreeProductPreview cfg={cfg} tilt={tilt} showPieces={step >= 1} />
+            <ThreeProductPreview cfg={cfg} tilt={tilt} onTiltChange={setTilt} showPieces={step >= 1} />
           </div>
         </div>
       </div>
